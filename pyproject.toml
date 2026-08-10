@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "software-engineering-harness"
+version = "0.1.0a1"
+description = "A model-agnostic engineering harness that spends intelligence where it matters."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "Apache-2.0" }
+authors = [{ name = "SEH Contributors" }]
+dependencies = []
+
+[project.scripts]
+seh = "seh.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]

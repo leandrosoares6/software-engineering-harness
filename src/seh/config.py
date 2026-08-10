@@ -12,7 +12,9 @@ class SehConfig:
 
     @classmethod
     def for_repo(cls, root: Path) -> "SehConfig":
-        root = root.resolve()
+        from .git import repository_root
+
+        root = repository_root(root)
         state_dir = root / ".seh"
         return cls(root=root, state_dir=state_dir, db_path=state_dir / "seh.db")
 

@@ -6,7 +6,7 @@ SEH is a model-agnostic engineering harness designed to reduce unnecessary LLM u
 
 ## Status
 
-`0.1.0-alpha` — foundation prototype.
+`0.1.0a2` — foundation prototype.
 
 The first milestone intentionally contains **no LLM integration**. It proves the deterministic substrate first: Git-aware repository indexing, a structural graph, and queryable engineering context.
 
@@ -26,7 +26,13 @@ seh init
 seh index
 seh inspect UserService
 seh neighbors UserService
+seh neighbors --id class:0123456789abcdef0123
 ```
+
+`inspect` lists every partial match with its stable node ID and qualified name.
+`neighbors` succeeds only for an unambiguous query; when several nodes match, it
+lists candidates that can be selected with `--id`. Read commands reject missing,
+legacy, or stale indexes and never create repository state.
 
 ## Architecture direction
 
@@ -52,13 +58,17 @@ Deterministic Runtime ──► Evidence ──► Policy / Escalation
 
 - Git repository discovery
 - zero-infrastructure SQLite graph store
-- Java structural indexing prototype
+- Java AST indexing with Tree-sitter
 - symbol inspection
 - neighborhood queries
+- schema-versioned graph provenance and freshness checks
 - no LLM dependency
 
-The Java parser in this alpha is deliberately minimal and will be replaced by an AST-backed language adapter.
+The Java adapter indexes classes, interfaces, enums, records, nested types,
+methods, constructors, imports, inheritance, and interface implementation.
+Only Git-tracked files are indexed; unsupported, external, or ambiguous
+references are reported without creating speculative graph edges.
 
 ## License
 
-Apache-2.0 (proposed for the initial open-source release).
+Apache-2.0.

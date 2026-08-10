@@ -6,8 +6,8 @@
 - [x] SQLite graph store
 - [x] Java symbol prototype
 - [x] graph inspection
-- [ ] AST-backed language adapter
-- [ ] graph schema versioning
+- [x] AST-backed Java language adapter
+- [x] graph schema versioning
 
 ## M1 — Engineering IR + Context Compiler
 - [ ] Engineering IR v0.1 schema

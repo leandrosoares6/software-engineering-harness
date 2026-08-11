@@ -62,11 +62,18 @@ add-agent-evaluation-case
 A candidate has suitable granularity when:
 
 1. it represents one recognizable engineering intent;
-2. it coordinates more than a trivial textual edit;
-3. its variation is expressible through typed parameters;
-4. its effects are bounded and known before writing;
-5. correctness is objectively verifiable;
-6. replay requires no new architectural or domain decision.
+2. the procedure occurs as repeated **change events**, not merely as multiple similar structures in one
+   repository snapshot;
+3. it coordinates more than a trivial textual edit;
+4. its variation is expressible through typed parameters;
+5. its effects are bounded and known before writing;
+6. correctness is objectively verifiable;
+7. replay requires no new architectural or domain decision.
+
+Snapshot multiplicity is not evidence of procedural recurrence. Four commands may have been authored once
+in a bootstrap commit; eleven enum members may have arrived in one batch. Retrospective candidates require
+distinct accepted change events in history. A prospective capture must preserve the actual `before/` bytes
+at the time of the first change and exercise a second event before clearing the thesis gate.
 
 ## Closed capabilities in the MVP
 
@@ -82,28 +89,47 @@ Capabilities also cannot invoke other capabilities in the MVP. They compose only
 Capability-to-capability composition is deferred because it introduces dependency versions, cycles, parameter
 propagation, effect conflicts, and distributed rollback.
 
+### Structural scope versus behavior
+
+A closed capability guarantees that **its own patch** is completely determined by declared parameters. It
+does not guarantee that the capability completes the developer's entire feature without further reasoning.
+
+Capabilities scaffold structure and wire existing symbols; they do not invent new domain behavior. For
+example, `add-cli-command` can create a command skeleton, register its parser and dispatch, and make the
+skeleton fail loudly with `NotImplementedError`. The external agent may then implement the command body as a
+separate, ordinary edit. That edit is not a hidden extension point, is not part of the capability operation,
+and must be measured separately.
+
+This distinction narrows fidelity: the accepted reference is the **structural subset** the capability claims
+to reproduce, not every behavioral line in the original feature. Capture must make that boundary explicit in
+the expected patch; SEH never infers it.
+
 ## A closed primitive algebra
 
 The primitive vocabulary is closed and deliberately small. A consuming project cannot add arbitrary Python
 plugins or lifecycle scripts as new primitives. If two real capabilities require a missing primitive, that is
 product evidence: the primitive can be added to SEH deliberately, versioned, reviewed, and tested.
 
-The initial vocabulary to test in Phase 0 is:
+The provisional vocabulary retained after the first Phase 0 spikes is:
 
 ```text
 LOCATORS (Python AST → source span)    EFFECTS (source text → patch)
-├── python.module                     ├── file.render
 ├── python.symbol                     ├── splice.before
-├── python.assignment                 ├── splice.after
-├── python.collection_literal         └── splice.into_collection
-└── python.import_block
+├── python.statement                  ├── splice.after
+├── python.class_body                 └── splice.into_collection
+└── python.collection_literal
 
 VERIFICATION
 └── verify.command
 ```
 
-This list is a hypothesis, not a frozen API. Phase 0 must derive the smallest useful vocabulary empirically
-from two capabilities with different shapes.
+This list is a hypothesis, not a frozen API. The first two capabilities shared only `splice.after`; the
+third, shape-adjacent capability then reused all four predicted structural primitives. `python.module`,
+`python.assignment`, `python.import_block`, and `file.render` were proposed but not exercised and therefore
+are not admitted provisionally. In particular, creating a module merely to cover `file.render` would repeat
+the snapshot-multiplicity error: a real recurring procedure must demand it first. The shared algebra remains
+conditional on prospectively captured, developer-accepted change events. See
+[`PHASE0_FINDINGS.md`](PHASE0_FINDINGS.md).
 
 Each structural primitive supports one declared syntactic form and refuses the others. For example,
 `splice.into_collection` for a list literal is not a generic “register this value somewhere” operation. A
@@ -127,9 +153,15 @@ The AST provides node positions (`lineno`, `col_offset`, `end_lineno`, `end_col_
 validated source span into an insertion offset and changes only the declared fragment. Untouched files remain
 byte-identical; within a touched file, bytes outside the splice remain identical.
 
-Inserted text derives local style from neighboring source, including indentation, separators, and trailing
-commas. SEH must not impose a formatter-specific style during replay. Formatting tools may be verification
-commands, but they are not a hidden prerequisite for fidelity.
+Inserted text derives local style from structurally relevant siblings, including indentation, separators,
+and trailing commas. Style derivation belongs to the locator: only it knows the parent and sibling set. A
+located span therefore carries the separator measured between two existing siblings of the same parent; an
+effect applies that separator but does not infer it from arbitrary adjacent whitespace.
+
+Grammar does not represent every human grouping. A group of adjacent argparse statements, for example, has
+no AST boundary. Horizontal style and sibling rhythm are derived; conventional grouping outside the grammar
+must be declared explicitly by the capability. SEH must not impose a formatter-specific style during replay.
+Formatting tools may be verification commands, but they are not a hidden prerequisite for fidelity.
 
 Every effect contributes to an in-memory plan. SEH validates all preconditions and detects conflicting
 effects before writing. The complete patch is applied atomically; a failed precondition or verification must
@@ -141,11 +173,11 @@ A capability candidate is an agent-authored package such as:
 
 ```text
 .seh-capabilities/
-└── add-agent-tool/
+└── add-capability-subcommand/
     ├── capability.yaml
     ├── templates/
-    │   ├── tool.py.j2
-    │   └── test_tool.py.j2
+    │   ├── handler.py.j2
+    │   └── parser-registration.py.j2
     └── examples/
         ├── fidelity/
         │   ├── before/
@@ -161,43 +193,42 @@ The schema is `seh.capability/v0.1`. A conceptual manifest is:
 
 ```yaml
 schema: seh.capability/v0.1
-id: python-chat-agent.add-agent-tool
+id: seh.add-capability-subcommand
 version: 1
 
 intent:
-  summary: Add a callable tool to the chat agent
+  summary: Add a subcommand to the existing seh capability command group
   use_when:
-    - A service function must become available to the chat agent
+    - The capability command group already exists and needs another subcommand
   do_not_use_when:
-    - The request changes how tools are discovered
+    - The capability command group does not exist yet
 
 parameters:
   name:
     type: python_identifier
-  service_symbol:
-    type: python_symbol
-    must_exist: true
 
 applicability:
   all:
-    - python_assignment_exists: app.agents.registry.CHAT_AGENT_TOOLS
+    - python_symbol_exists: seh.capability_cli.build_capability_parser
 
 steps:
-  - uses: file.render
+  - uses: splice.after
     with:
-      template: templates/tool.py.j2
-      destination: app/tools/{{ name }}.py
-  - uses: splice.into_collection
+      selector: last_function_with_prefix
+      prefix: cmd_
+      template: templates/handler.py.j2
+  - uses: splice.before
     with:
-      symbol: app.agents.registry.CHAT_AGENT_TOOLS
-      value: "{{ name }}"
+      symbol: seh.capability_cli.build_capability_parser
+      anchor: return
+      template: templates/parser-registration.py.j2
 
 verification:
   - uses: verify.command
     with:
       command: pytest
       args:
-        - tests/tools/test_{{ name }}.py
+        - tests/test_capability_cli.py
 ```
 
 Arbitrary `before` and `after` hooks are excluded. In the MVP, project commands may appear only as declared
@@ -205,17 +236,29 @@ verification with explicit executable, arguments, timeout, and expected exit sta
 
 ## Base-state fixtures and the four gates
 
-A candidate is authored after the accepted implementation exists, so fidelity cannot run against the current
-working tree: the created artifacts are already present. Each gate therefore uses a versioned fixture that
-represents the relevant pre-implementation state.
+A candidate is usually authored after the accepted implementation exists, so fidelity cannot run against the
+current working tree: the created artifacts are already present. SEH therefore requires a **recorded clean
+Git baseline** at task start: the worktree has no tracked or untracked changes, and the baseline tree or
+unborn empty tree is recorded before mutation. After developer confirmation, declared `before` bytes come
+from that baseline and the accepted structural subset comes from its diff.
 
-Fixtures are scoped snapshots of declared files, not Git references. They survive rebases and squash merges
-and contain only the minimum state needed to exercise the capability.
+This resolves the timing problem without a resident edit ledger or a capture decision before the developer
+has seen working code. Recording a Git tree is cheap and unconditional; deciding whether to crystallize the
+successful procedure still happens afterward. If the baseline was dirty, absent, or cannot be proven, SEH
+refuses capture because the true boundary between pre-existing work and the new change is unknowable.
+
+Fixtures must never be reconstructed later by deleting lines from the final snapshot: ordering and
+neighboring structure are historical facts, and subtraction can create a state that never existed.
+
+The captured bytes become scoped fixtures of declared files, not long-lived Git references. The fixture
+survives later rebases and squash merges because it stores the real state directly. It contains only the
+minimum state needed to exercise the capability.
 
 `seh capability validate` runs four gates:
 
 1. **Fidelity** — instantiate the candidate against the first `before/` fixture and reproduce the accepted
-   patch over declared files.
+   **structural patch** over declared files. Behavioral edits outside the capability boundary are excluded
+   explicitly, never silently ignored.
 2. **Generalization** — instantiate it against a different fixture and parameter set proposed by the agent
    and approved or edited by the developer.
 3. **Idempotency** — run it over its own result; the second invocation is a no-op or an explicit
@@ -270,21 +313,49 @@ installed catalogue
                 → deterministic operation
 ```
 
-## Phase 0 output
+## Phase 0 output and current status
 
-Phase 0 must hand-author **two capabilities of different shapes**. One capability can prove that a case was
-hard-coded; two begin to reveal whether a reusable primitive algebra exists.
+The spike hand-authored three capabilities. The third, `add-java-relation-kind`, reused all four predicted
+primitives and showed that the initial overlap of one was a sample-shape artefact. It also exposed that none
+of the three candidates represented a genuinely repeated change event: similar structures had mostly been
+created together in bootstrap commits. A fidelity fixture reconstructed by subtraction therefore failed
+against an accepted ordering that never existed in the supposed `before/` state.
+
+An in-memory prospective rehearsal captured the real current bytes and reproduced an independently authored
+`report` scaffold byte-for-byte; the same capability also produced a correct proposed `doctor` scaffold over
+the evolved state. The reference patch used direct literal insertions at explicit text boundaries and did not
+call the capability's AST locators, splice effects, or template constants. This validates the mechanics, not
+the product gate: the second case has not yet been approved or edited by the developer and neither scaffold
+is a retained project change.
+
+Phase 0 remains open. Its real sequence is intentionally asymmetric:
+
+1. implement `seh capability validate` manually, creating the command group; this one-time setup is not a
+   capture event;
+2. from a recorded clean Git baseline, implement and accept `seh capability install` manually, then capture
+   its structural patch;
+3. derive `add-capability-subcommand` from the accepted `install` event and validate it with the already
+   implemented `validate` machinery;
+4. have the capability generate `seh capability run` as the developer-approved generalization event.
+
+Using `validate` to judge a capability learned from `install` is not circular: the validator is the machine
+that evaluates a candidate, while the candidate is project data describing a repeatable edit. See
+[`PHASE0_FINDINGS.md`](PHASE0_FINDINGS.md).
 
 The phase delivers:
 
-1. a provisional closed primitive vocabulary derived from both capabilities;
-2. two capability packages with pre-implementation fixtures;
+1. a provisional closed primitive vocabulary supported by shape-adjacent capabilities;
+2. capability packages with prospectively captured pre-implementation fixtures and structural expected
+   patches;
 3. source-preserving AST-location plus textual-splice prototypes;
-4. all four gates passing for both capabilities;
+4. all four gates passing for every retained capability;
 5. an explicit record of primitives that were shared, split, added, or rejected.
+
+The first spike record is [`PHASE0_FINDINGS.md`](PHASE0_FINDINGS.md). Its status is evidence, not a completed
+milestone.
 
 No production CLI, final schema parser, MCP surface, arbitrary scripts, capability composition, or extension
 points belong to this phase. Its question is narrower:
 
-> What is the smallest deterministic language that can express two real recurring procedures of this
+> What is the smallest deterministic language that can express multiple real recurring change events of this
 > project without losing source fidelity?

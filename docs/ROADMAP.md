@@ -52,13 +52,20 @@ structure directly, not an attempt to match Serena/Aider in indexing depth or la
 - [ ] baseline vs. SEH benchmark on a reproducible POC project
 
 ## M3 — `seh capability`: Procedural Memory *(the product)*
-- [ ] **feasibility spike first**: hand-write two capabilities of different shapes for already-repeated
-      patterns in this repo; derive the smallest shared primitive algebra and make all four gates pass for
-      both. Everything below is conditional on this
+- [x] **initial source-preservation spike**: hand-write `add-cli-command` and `add-node-kind`; prove AST→offset
+      plus textual splice, executable scaffolding, idempotency, and safe refusal. Findings:
+      [`PHASE0_FINDINGS.md`](PHASE0_FINDINGS.md)
+- [x] **third shape-adjacent capability**: `add-java-relation-kind` reused all four predicted primitives and
+      confirmed that nested scope addressing is a locator refinement, not a new primitive
+- [ ] **complete the Phase 0 gate with required product events**: implement `seh capability validate` by
+      hand as one-time group setup; from a recorded clean Git baseline, implement and capture `install` as
+      the first clean subcommand event; derive `add-capability-subcommand`; generate developer-approved `run`
+      as generalization. The validator judging a candidate learned from `install` is machinery judging data,
+      not a circular dependency. Everything below is conditional on this
 - [ ] `seh.capability/v0.1` format — intent, typed parameters, applicability, preconditions, primitive steps,
       templates, fixtures, verification, provenance
-- [ ] closed, versioned primitive vocabulary — no project-defined plugins, arbitrary lifecycle hooks, or
-      model-generated code slots in the MVP
+- [ ] closed, versioned primitive vocabulary — only primitives exercised by real retained events;
+      `file.render` remains excluded until a recurring procedure genuinely creates files
 - [ ] source-preserving Python edits — AST locates and validates exact spans; textual splice writes; never
       mutate and `ast.unparse()` the module
 - [ ] `seh capability validate ./candidate` — runs the four gates against an agent-authored candidate and
@@ -68,7 +75,8 @@ structure directly, not an attempt to match Serena/Aider in indexing depth or la
 - [ ] **the four gates**: fidelity (rebuilds its own first example), generalization (produces a correct
       second case, proposed by the agent and approved by the developer), idempotency (re-applying does not
       duplicate or corrupt), safe refusal (incompatible structure errors out explicitly)
-- [ ] developer-confirmed capture — the agent may offer, the developer decides
+- [ ] developer-confirmed capture — every eligible task records a clean Git baseline; after success the
+      agent may offer and the developer decides; missing or dirty baseline causes explicit refusal
 - [ ] `seh capability run CAPABILITY_ID` — instantiates an immutable operation with no inference in the path
 - [ ] **AST-anchored insertion into existing files** (the hard part scaffolders skip; one well-defined
       anchor kind in the MVP, not a generic engine)
@@ -79,18 +87,18 @@ structure directly, not an attempt to match Serena/Aider in indexing depth or la
       applicability filtering; steps, fixtures, and templates stay outside its context
 - [ ] capabilities versioned in `.seh-capabilities/`; operation records remain local evidence in `.seh/`
 - [ ] no capability-to-capability composition in the MVP; capabilities compose only SEH primitives
-- [ ] dogfooding: author, validate, and install two candidates of different shapes, including
-      `add-cli-command`, then instantiate them against new cases
+- [ ] dogfooding: validate and install `add-capability-subcommand` plus one candidate of a genuinely different
+      shape, then instantiate both against new real cases
 - [ ] payback curve: how many instantiations before a capability pays for its authoring cost
 
 M1a, M2 and M3 all belong to the MVP, but M3 is the differentiator. M1a and M2 exist largely to serve it:
 M1a provides the AST substrate that structural insertion needs, M2 verifies every operation and reports the
 numbers.
 
-The falsification point is **technical before economic**. First: can correct, reusable capabilities be
-generalized from a single accepted implementation? That is answerable in days, by hand, with no benchmark —
-and if the answer is no, nothing else matters, because a capability that emits almost-correct code
-deterministically is worse than no capability at all. Only then does payback become the question.
+The falsification point is **technical before economic**. The spike proved source-preserving structure and
+primitive reuse, not fidelity or procedural recurrence. Phase 0 remains open until gates 1–2 run against
+fixtures captured prospectively from true change events. If that fails, nothing else matters; only then does
+payback become the question.
 
 ## M4 — Distribution
 - [ ] MCP server exposure (single-command install, no external process to configure) — exposes
@@ -99,7 +107,8 @@ deterministically is worse than no capability at all. Only then does payback bec
 - [ ] optional benchmark arm against Serena / OHM-MCP — market reference only, never a runtime dependency
 
 ## M5 — Future evolution
-- [ ] derive candidate capabilities from past commits (offer capture without an explicit session)
+- [ ] derive candidate capabilities from past commits only when a real parent tree preserves the exact
+      `before` state; squash/rebase gaps cause refusal, never reconstruction by subtraction
 - [ ] capability catalogue retrieval — as the vocabulary grows, selecting the wrong capability produces the
       wrong result quickly and confidently; applicability declarations and loud preconditions are the
       current containment, not a solution

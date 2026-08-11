@@ -70,6 +70,9 @@ No compatible capability exists yet. The agent therefore follows the cold path:
 Developer prompt
     │
     ▼
+Agent verifies a clean Git worktree and records the baseline tree
+    │
+    ▼
 Agent interprets the requirement
     │
     ├──► SEH locates relevant Python symbols and relationships
@@ -106,6 +109,14 @@ seh capability validate ./candidate
          └── all gates pass ──► seh capability install ──► .seh-capabilities/
 ```
 
+Every coding task that may produce project memory starts from a clean Git worktree and records its baseline
+tree. This is constant-size provenance, not a resident edit ledger. After the implementation succeeds and the
+developer confirms capture, the agent materializes the declared `before` bytes from that baseline and the
+accepted structural patch from the diff. If no clean baseline was recorded, capture refuses: it never
+manufactures a `before` state by deleting resulting lines later. Similar structures in the final repository
+do not prove recurrence; the capability is justified by repeated change events or by a prospective second
+event approved by the developer.
+
 During this first implementation, the agent discovers that adding a tool to this project consistently
 requires it to:
 
@@ -119,6 +130,10 @@ requires it to:
 
 The domain behavior remains specific to the request. The surrounding engineering procedure is the reusable
 part.
+
+This final-state scenario eventually needs a file-creation primitive. Phase 0 does not admit `file.render`
+preemptively: it enters the closed vocabulary only after real retained change events demonstrate that file
+creation is part of a recurring procedure and the primitive clears the same gates.
 
 ## Crystallization: turning experience into project capability
 
@@ -137,7 +152,7 @@ which runs four gates, and only a candidate that clears all four reaches the cat
 
 | Gate | Question | Why it is not redundant |
 | --- | --- | --- |
-| Fidelity | Does it rebuild the implementation the developer accepted? | Establishes the capability is faithful to a real, working example |
+| Fidelity | Does it rebuild the accepted structural subset declared at capture? | Establishes that the capability is faithful without pretending to author domain behavior |
 | Generalization | Does it produce a correct second case with different parameters? | Fidelity alone proves memorization. This is the gate that proves *reuse* |
 | Idempotency | Does re-applying it avoid duplicating or corrupting? | Registries and subparsers are append targets; a second run must not double-register |
 | Safe refusal | Does an incompatible structure fail loudly? | A capability that adapts silently is worse than one that stops |
@@ -146,10 +161,16 @@ The second case is proposed by the agent and approved — or edited — by the d
 never graded solely against an example its own author selected.
 
 Because the accepted implementation already exists when the candidate is authored, each gate runs against a
-small versioned fixture representing the relevant state *before* that implementation. The fixture contains
-only declared files and survives Git rebases or squash merges.
+small versioned fixture materialized from the clean Git baseline recorded before that implementation. The
+fixture contains only declared files and survives later Git rebases or squash merges. A task that began from
+an unrecorded or dirty baseline is ineligible for capture.
 
 Better a refused capability than one that emits almost-correct code deterministically.
+
+A capability may cover only the structural envelope of the developer's request. It can create a handler
+skeleton, register it, and make it fail loudly while the external agent writes genuinely new domain behavior
+as a separate edit. That edit is not a code slot in the capability and is measured outside the deterministic
+operation.
 
 Conceptually, the capability may accept:
 

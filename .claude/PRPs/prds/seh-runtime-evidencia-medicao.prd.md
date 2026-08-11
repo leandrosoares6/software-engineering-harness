@@ -87,7 +87,7 @@ Os limiares de 30%/50% são apostas iniciais. O de latência é deliberadamente 
 
 | Métrica | Alvo | Como medir |
 |---|---|---|
-| **Gate 1 — Fidelidade** | Patch idêntico | Replay do candidato comparado à implementação aceita, **sobre os arquivos declarados**, não o repo inteiro |
+| **Gate 1 — Fidelidade estrutural** | Patch estrutural idêntico | Operação comparada ao subconjunto estrutural aceito e declarado na captura; lógica de domínio posterior fica explicitamente fora |
 | **Gate 2 — Generalização** | 2º caso correto, testes verdes | Parâmetros diferentes; caso proposto pelo agente e **aprovado/editado pelo dev**; verificação pela suíte, não por inspeção visual |
 | **Gate 3 — Idempotência** | Reaplicar não duplica nem corrompe | Rodar duas vezes seguidas; segunda execução é no-op ou falha explícita, nunca duplicação silenciosa |
 | **Gate 4 — Recusa segura** | Erro explícito, zero escrita parcial | Rodar contra estrutura incompatível (âncora ausente/alterada) e verificar que nada foi escrito |
@@ -173,7 +173,7 @@ O mínimo para validar a hipótese, em ordem de dependência:
 5. Um **runner + compressor** `pytest` → evidência, para verificar o replay.
 6. O **experimento baseline vs. SEH**, com capacidades instanciadas N vezes para medir a curva de payback.
 
-O ponto de falsificação mudou duas vezes. Não é mais "compressão gera delta?", nem apenas "em quantas repetições se paga?" — é primeiro **"um candidato passa nos quatro gates?"** (hipótese A, técnica, respondida na Fase 0) e só depois a curva de payback (hipótese B, econômica). Ver a bifurcação de resultado em *Key Hypothesis*.
+O ponto de falsificação mudou duas vezes. Não é mais "compressão gera delta?", nem apenas "em quantas repetições se paga?" — é primeiro **"um candidato passa nos quatro gates?"** (hipótese A, técnica, ainda em avaliação na Fase 0) e só depois a curva de payback (hipótese B, econômica). Ver a bifurcação de resultado em *Key Hypothesis*.
 
 ### User Flow
 
@@ -200,6 +200,9 @@ agente seleciona capacidade ──► seh capability run add-cli-command --name=
 ─── CAMINHO B: tarefa nova (o LLM continua no circuito) ───
 
 dev: "implementa cache distribuído"
+      │
+      ▼
+agente verifica árvore Git limpa + registra baseline
       │
       ▼
 seh inspect / neighbors ──► contexto mínimo ──► LLM raciocina e escreve
@@ -236,7 +239,7 @@ O Caminho B alimenta o Caminho A: cada padrão aprovado vira capacidade; cada us
 
 - **Self-contained por design.** Nenhuma dependência de instalar um servidor MCP externo (Serena) como pré-requisito. O SEH é a única coisa que o usuário instala.
 - **Indexação simbólica própria, em Python, via `ast` da stdlib.** Substitui o paradigma Tree-sitter/Java do PR #1. Escopo deliberadamente mínimo — o bastante para a evidência referenciar `arquivo:linha:função`, não uma tentativa de igualar LSP.
-- **AST localiza; texto escreve.** `ast.unparse()` é proibido no caminho de mutação porque destrói comentários e reformata código mesmo sem mudança. Offsets AST validam a âncora; splice textual local preserva bytes e deriva estilo do texto vizinho.
+- **AST localiza; texto escreve.** `ast.unparse()` é proibido no caminho de mutação porque destrói comentários e reformata código mesmo sem mudança. O localizador mede estilo entre irmãos do mesmo pai e entrega span + separador; o splice apenas aplica o fragmento e preserva os demais bytes. Agrupamentos humanos ausentes da gramática são declarados pela capacidade.
 - **Álgebra fechada.** Capacidades compõem somente primitivas implementadas e versionadas pelo SEH. Uma primitiva ausente é sinal de produto, não autorização para plugin ou hook arbitrário.
 - **Seleção barata.** O modelo recebe apenas projeção compacta de intenção e parâmetros das capacidades aplicáveis; templates, fixtures e passos ficam fora do contexto.
 - **Reaproveitar a disciplina de evidência do PR #1.** Fingerprint, schema versionado e recusa de dado obsoleto ("evidência confiável ou erro explícito") são exatamente a semântica que o `seh-evidence` precisa — a arquitetura sobrevive, a implementação (Tree-sitter Java) é substituída por `ast` Python.
@@ -250,7 +253,7 @@ O Caminho B alimenta o Caminho A: cada padrão aprovado vira capacidade; cada us
 |---|---|---|
 | **Custo de capturar uma capacidade não se paga para o ICP original** | Alta | Métrica de payback (≤5 operações) na Fase 6; se a hipótese técnica passar e a econômica falhar, reposicionar o ICP ou encerrar a promessa econômica |
 | **Inserção estrutural preserva semântica, mas destrói source fidelity** | Alta | AST apenas localiza; splice textual escreve e preserva bytes fora do fragmento; `ast.unparse()` excluído |
-| **Uma capacidade só produz uma “álgebra” hard-coded** | Alta | Fase 0 exige duas capacidades de formas diferentes e registra quais primitivas foram compartilhadas ou divididas |
+| **A amostra produz uma “álgebra” fragmentada ou hard-coded** | Alta | A terceira capacidade shape-adjacent reutilizou as quatro primitivas previstas; a Fase 0 ainda exige eventos prospectivos aceitos para evitar validar templates artificiais |
 | **MVP com uma alavanca só (evidência) não move o número o bastante** | Alta | Adaptador Python e capacidades entram como Must; evidência é uma alavanca de suporte |
 | Capacidade instalada fica obsoleta quando o padrão do projeto muda | Média | Precondições locais + verificação após a operação; estrutura incompatível falha antes de escrever |
 | Seleção exige ler o catálogo inteiro e recria custo de contexto | Média | Filtro determinístico de aplicabilidade + projeção compacta somente de `intent` e parâmetros |
@@ -267,11 +270,11 @@ O Caminho B alimenta o Caminho A: cada padrão aprovado vira capacidade; cada us
 
 | # | Fase | Descrição | Status | Parallel | Depends | PRP Plan |
 |---|---|---|---|---|---|---|
-| 0 | **Spike da álgebra de capacidades** | Escrever **duas capacidades de formas diferentes** à mão, derivar primitivas compartilhadas, provar splice source-preserving e passar os quatro gates com fixtures. **Sem CLI ou schema final** | pending | - | - | - |
+| 0 | **Spike da álgebra de capacidades** | Três capacidades provaram preservação, idempotência, recusa e reutilização; faltam `install`/`run` como eventos reais sobre baseline Git limpo. **Sem schema ou CLI finais** | in progress | - | - | - |
 | 1 | Adaptador Python + consulta de símbolo | `python_adapter.py` + `seh inspect`/`seh neighbors` — substrato AST para âncoras estruturais | pending | with 2 | 0 | - |
 | 2 | Runner + compressor de evidência | `pytest` executado fora do contexto → evidência estruturada | pending | with 1 | 0 | - |
 | 3 | **`seh capability` — formato e runtime** | `seh.capability/v0.1`, primitivas fechadas, catálogo compacto, quatro gates e operações imutáveis — **o produto** | pending | - | 1, 2 | - |
-| 4 | Dogfooding no próprio SEH | Instalar as duas capacidades da Fase 0 e usá-las em novos casos reais | pending | - | 3 | - |
+| 4 | Dogfooding no próprio SEH | Instalar `add-capability-subcommand` e uma capacidade de outra forma; usá-las em casos reais | pending | - | 3 | - |
 | 5 | POC, instrumentação e baseline | Projeto POC com repetição real + medidor de tokens e latência + braço A | pending | with 3, 4 | 0 | - |
 | 6 | Braço SEH, curva de payback e veredito | Medir tokens, latência e em quantas operações cada capacidade se paga | pending | - | 4, 5 | - |
 | 7 | Exposição via MCP | Empacotar como servidor MCP self-contained | pending | - | 6 | - |
@@ -281,11 +284,12 @@ O Caminho B alimenta o Caminho A: cada padrão aprovado vira capacidade; cada us
 
 **Fase 0: Spike da álgebra de capacidades** *(o portão — nada começa antes disso)*
 - **Objetivo**: descobrir se existe uma linguagem determinística pequena e compartilhável para procedimentos reais, antes de investir em CLI, schema final, medição ou empacotamento.
-- **Escopo**: escolher **dois padrões repetidos e de formas diferentes** no SEH — `add-cli-command` e um segundo candidato confirmado durante o spike. Escrever duas capacidades à mão, com fixtures sintéticas e versionadas do estado pré-implementação. Implementar apenas o necessário para AST localizar spans e splice textual produzir patches, nunca `ast.unparse()`.
-- **Quatro gates por capacidade**: fidelidade sobre arquivos declarados; generalização em segundo caso aprovado/editado pelo dev; idempotência; recusa segura com zero escrita parcial.
-- **Sinal de sucesso**: ambas passam os gates; o resto do arquivo tocado permanece byte a byte idêntico; e emerge um vocabulário pequeno com primitivas realmente compartilhadas.
+- **Estado atual**: `add-cli-command`, `add-node-kind` e `add-java-relation-kind` provaram source preservation, scaffolding executável, idempotência, recusa segura e reutilização das quatro primitivas previstas. O histórico revelou, porém, que multiplicidade no snapshot não prova recorrência procedural e que uma fixture `before/` não pode ser reconstruída por subtração. Um ensaio prospectivo em memória reproduziu `report` e generalizou tecnicamente para `doctor`, mas o segundo caso ainda não foi aprovado pelo dev. Ver `docs/PHASE0_FINDINGS.md`.
+- **Escopo restante**: implementar `seh capability validate` à mão como criação única do grupo; iniciar `install` sobre baseline Git limpo e registrado, aceitá-lo e capturar seu subconjunto estrutural; derivar `add-capability-subcommand`; gerar `run` como segundo evento aprovado/editado pelo dev. `validate` é a máquina que julga a capacidade derivada de `install`, não dado de treinamento, portanto não há circularidade.
+- **Quatro gates por capacidade**: fidelidade estrutural; generalização; idempotência; recusa segura com zero escrita parcial.
+- **Sinal de sucesso**: as capacidades retidas passam os gates; bytes fora dos fragmentos permanecem idênticos; e emerge um vocabulário pequeno com primitivas realmente compartilhadas.
 - **Sinal de fracasso**: primitivas específicas para cada template, perda de comentários/formatação, excesso de casos especiais, ou incapacidade de recusar estrutura incompatível.
-- **Entregas**: primeira álgebra fechada; dois pacotes de capacidade; fixtures dos quatro gates; protótipo AST→offset + splice; log de primitivas compartilhadas, divididas, adicionadas e rejeitadas.
+- **Entregas**: primeira álgebra fechada; `add-capability-subcommand` validada sobre `install`/`run`; fixtures dos quatro gates; protótipo AST→offset + splice; log de primitivas compartilhadas, divididas, adicionadas e rejeitadas.
 - **Fora de escopo**: CLI de produção, schema definitivo, MCP, plugins, hooks arbitrários, pontos de extensão e composição entre capacidades.
 
 **Fase 1: Adaptador Python + consulta de símbolo**
@@ -305,7 +309,7 @@ O Caminho B alimenta o Caminho A: cada padrão aprovado vira capacidade; cada us
 
 **Fase 4: Dogfooding no próprio SEH**
 - **Objetivo**: provar as capacidades em código real antes de medir.
-- **Escopo**: instalar as duas capacidades da Fase 0 e instanciá-las em novos casos necessários ao SEH.
+- **Escopo**: instalar `add-capability-subcommand` e uma segunda capacidade de forma diferente, então instanciá-las em novos casos necessários ao SEH.
 - **Sinal de sucesso**: dois casos reais nascem de `seh capability run`, com testes verdes e sem edição manual do procedimento mecânico.
 
 **Fase 5: POC, instrumentação e baseline**
@@ -330,7 +334,9 @@ O Caminho B alimenta o Caminho A: cada padrão aprovado vira capacidade; cada us
 
 ### Parallelism Notes
 
-**A Fase 0 é o portão real e bloqueia tudo.** É deliberadamente artesanal porque precisa responder se duas capacidades distintas revelam uma álgebra pequena e source-preserving. Uma capacidade só provaria que sabemos hard-codear um caso.
+**A Fase 0 é o portão real e bloqueia tudo.** O primeiro spike provou que splice source-preserving funciona,
+mas o histórico não forneceu eventos recorrentes nem fixtures reais para os gates 1–2. `install` precisa ser
+capturado de um baseline Git limpo e `run` precisa ser aprovado como segundo evento antes de liberar a fase.
 
 Depois dela, 1 e 2 são paralelizáveis (adaptador e runner tocam superfícies distintas). A **Fase 3 depende das duas**: precisa do AST da 1 para inserir estruturalmente e da verificação da 2 para validar cada replay. A Fase 5 (POC e baseline) só depende da Fase 0 e pode correr em paralelo com 3 e 4 — construir o experimento não depende do produto estar pronto. A Fase 6 exige 4 e 5. A Fase 8 é pesquisa independente e roda a qualquer momento.
 
@@ -342,6 +348,7 @@ Depois dela, 1 e 2 são paralelizáveis (adaptador e runner tocam superfícies d
 |---|---|---|---|
 | **Tese do produto** | **Memória procedural versionada do projeto** — o projeto aprende como é construído | "Ferramenta de economia de token/latência" | Economia vira consequência, não promessa: sobrevive a um benchmark morno e é diferenciável sem precisar de número. Formulada pelo autor em `docs/PRODUCT_SCENARIO.md` |
 | **Gatilho de captura** | Agente oferece, **dev confirma** | (a) agente decide sozinho após a 1ª vez; (b) SEH detecta na 2ª ocorrência via similaridade de diff | Após uma ocorrência não há como *saber* que recorre, só apostar. Quem tem contexto para decidir é o dev. Mantém o catálogo pequeno e confiável; (b) fica como evolução |
+| **Origem da fixture `before`** | Baseline Git limpo registrado no início da tarefa | Edit ledger residente; subtração do resultado; declarar captura antes de implementar | Preserva a oferta depois do sucesso sem processo residente. Se a árvore inicial estava suja ou o baseline não foi registrado, o estado anterior é indemonstrável e a captura recusa |
 | **Unidade de aprendizagem** | **Capacidade** é o artefato versionado; **operação** é uma instanciação | Chamar o artefato persistido de operação | A capacidade descreve procedimento reutilizável; a operação possui parâmetros, plano, patch e evidência de uma execução concreta |
 | **Generalização (arquivo → template)** | **Agente externo escreve** o template; SEH valida por reprodução | SEH deriva do diff; dev escreve à mão | O agente acabou de escrever o código e sabe o que é domínio vs. estrutura. SEH não infere essa fronteira — só rejeita capacidade que não reconstrói o próprio exemplo |
 | **SEH chama modelo?** | **Nunca** — em nenhum milestone | SEH com provider próprio para criar capacidades | O agente externo materializa a capacidade. Elimina API key, billing, auth e configuração de modelo do produto inteiro |
@@ -350,8 +357,8 @@ Depois dela, 1 e 2 são paralelizáveis (adaptador e runner tocam superfícies d
 | **Quem escolhe o 2º caso** | Agente propõe, **dev aprova ou edita** | Agente escolhe sozinho; dev projeta do zero | Agente sozinho se autoavalia contra um caso que ele escolheu. Dev projetando do zero adiciona atrito a cada captura. Aprovar/editar preserva o controle sem o custo |
 | **Contrato de determinismo** | `capacidade + parâmetros + estado-base compatível → mesmo plano e patch`, escopado aos arquivos declarados | "Mesmo resultado no repositório" | Mudança não relacionada em outro arquivo não pode invalidar uma capacidade. Compatibilidade verificada por precondições locais, não por fingerprint global |
 | **Mutação Python** | AST localiza spans; splice textual escreve | Modificar AST e chamar `ast.unparse()`; adotar LibCST | Parse/unparse altera comentários e formatação sem nenhuma mudança semântica. Splice preserva bytes e mantém zero dependência externa |
-| **Vocabulário de primitivas** | Fechado, pequeno, versionado pelo SEH e derivado de duas capacidades | Plugins/scripts/hooks definidos pelo projeto | Primitiva ausente é sinal de produto. Vocabulário aberto cria API pública, superfície de segurança e comportamento opaco |
-| **Estado-base dos gates** | Fixtures sintéticas, mínimas e versionadas com a capacidade | Repo atual; refs Git | A capacidade é escrita depois da implementação; o repo atual já contém os artefatos. Fixtures sobrevivem a rebase e squash |
+| **Vocabulário de primitivas** | Fechado, pequeno, versionado pelo SEH e limitado ao que eventos reais exercitaram; `file.render` ainda excluído | Plugins/scripts/hooks definidos pelo projeto | Primitiva ausente é sinal de produto. Criar um arquivo só para cobrir a primitiva fabricaria evidência; vocabulário aberto cria API pública, superfície de segurança e comportamento opaco |
+| **Estado-base dos gates** | Fixtures mínimas materializadas de um baseline Git limpo e versionadas com a capacidade | Repo atual; refs Git tardias; fixtures por subtração | O baseline registrado preserva o `before` verdadeiro; a fixture copia os bytes declarados e sobrevive a rebase e squash. Sem baseline limpo comprovável, captura recusa |
 | **Seleção de capacidade** | Filtro determinístico + projeção compacta de intenção | Modelo lê todos os manifestos | Ler templates e passos de 30 capacidades recriaria o custo de exploração que o produto quer remover |
 | **Composição no MVP** | Capacidades compõem apenas primitivas | Capacidade chama capacidade | Evita versões, ciclos, conflito de efeitos, propagação de parâmetros e rollback distribuído |
 | **Pontos de extensão no MVP** | Excluídos | Slots de código preenchidos pelo agente | Tornam o custo de duas instanciações incomparável e quebram a métrica econômica |
@@ -365,7 +372,7 @@ Depois dela, 1 e 2 são paralelizáveis (adaptador e runner tocam superfícies d
 | Indexação simbólica | Python `ast` da stdlib, escopo mínimo | Tree-sitter multi-linguagem; nenhum indexador próprio | Zero dependência externa; suficiente para a evidência referenciar símbolos; não compete em profundidade |
 | Modo de entrega | Servidor MCP | Wrapper de CLI que orquestra o agente | "Funciona em qualquer agent code" exige o protocolo que os agentes já falam |
 | Usuário primário | Dev solo que paga os próprios tokens | Time de plataforma; tech lead | Escolha do autor; alinha o produto a setup rápido e feedback direto |
-| Ordem de validação | Viabilidade técnica antes da infraestrutura; economia antes do release | Construir o produto inteiro antes de validar | Fase 0 testa os quatro gates artesanalmente; Fases 5–6 medem a economia antes de investir em distribuição |
+| Ordem de validação | Viabilidade técnica antes da infraestrutura; economia antes do release | Construir o produto inteiro antes de validar | Fase 0 precisa fechar os quatro gates artesanalmente; Fases 5–6 medem a economia antes de investir em distribuição |
 | Papel do Serena | Benchmark de pesquisa opcional | Dependência de produto (versão anterior desta decisão) | Revertido nesta sessão — autor não quer instalação externa obrigatória |
 | Linguagem do runtime v1 | Python | Java (seguindo o indexador atual) | O POC e o SEH são Python; autor concordou em migrar o paradigma |
 | PR #1 (indexador AST Java) | Congelar como referência de arquitetura | Reverter; estender em Java | Disciplina de proveniência/fingerprint é reaproveitável; implementação Tree-sitter/Java é substituída por `ast`/Python |

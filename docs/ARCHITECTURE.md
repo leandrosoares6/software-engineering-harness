@@ -55,9 +55,12 @@ SEH; a **capability** (`seh.capability/v0.1`) composes primitives, templates, ap
 verification, and examples; an **operation** is one immutable invocation of a capability against a compatible
 base state. Capabilities are versioned in `.seh-capabilities/`; operation records are local runtime evidence.
 
-Lifecycle: **offer** (the agent notices a reusable procedure) → **confirm** (the *developer* decides — after
-one occurrence recurrence can only be predicted, not known) → **propose** (the external agent authors a
-candidate: manifest, templates, and fixtures, paying the generalization cost once) → **validate**
+Lifecycle: **establish Git baseline** (the coding task starts in a clean worktree and records its tree) →
+**implement** → **offer** (after the change succeeds, the agent notices a reusable procedure) → **confirm**
+(the *developer* decides — after one occurrence recurrence can only be predicted, not known) → **materialize
+capture** (copy the declared `before` bytes from the recorded baseline and the accepted structural patch from
+the diff) → **propose** (the external agent authors a candidate: manifest, templates, and fixtures, paying
+the generalization cost once) → **validate**
 (`seh capability validate` runs the four gates below) → **install** (`seh capability install` promotes the
 candidate into `.seh-capabilities/`, versioned and reviewable in a PR) → **run** (`seh capability run`
 instantiates a deterministic operation with no inference in the path) → **verify**
@@ -68,12 +71,16 @@ are separate commands because a rejected candidate must never reach the catalogu
 
 Generalization — separating structure from domain in a concrete implementation — belongs to the external
 agent, which has just written the code and knows which parts carry meaning. SEH never infers that boundary.
+Capabilities scaffold and wire structure; they do not author new domain behavior. A later behavioral edit by
+the agent is separate from the deterministic operation and is measured separately, never smuggled into a
+model-generated capability parameter.
 
 #### The four gates
 
 A candidate becomes a capability only if it clears all four:
 
-1. **Fidelity** — instantiating it reproduces the implementation the developer already accepted.
+1. **Fidelity** — instantiating it reproduces the accepted structural subset declared during capture.
+   Behavioral edits outside the capability boundary are explicitly excluded from the expected patch.
 2. **Generalization** — it produces a correct second case with different parameters. The agent proposes the
    second case; the developer approves or edits it, so a candidate is never graded solely against an example
    its own author chose. Fidelity alone proves memorization, not reuse.
@@ -85,15 +92,24 @@ A candidate becomes a capability only if it clears all four:
 
 Python AST nodes locate and validate source spans; they never rewrite source. Effects splice rendered text at
 exact offsets and preserve all bytes outside their declared fragments. `ast.unparse()` is excluded because
-even an unchanged parse/unparse round trip destroys comments and reformats code. Local indentation,
-separators, and trailing commas are derived from neighboring text.
+even an unchanged parse/unparse round trip destroys comments and reformats code. Locators derive indentation,
+separators, and trailing commas from siblings of the same structural parent; effects apply that style. Human
+groupings absent from the grammar must be declared by the capability rather than guessed from whitespace.
 
-The primitive algebra is closed in the MVP: projects compose only the locators, splice effects, file render,
-and verification primitives implemented and versioned by SEH. Arbitrary hooks, project-defined primitives,
-model-generated code slots, and capability-to-capability composition are excluded.
+The primitive algebra is closed in the MVP: projects compose only locators, splice effects, and verification
+primitives admitted through real capabilities and versioned by SEH. `file.render` remains a candidate, not a
+provisional primitive: no retained recurring event has exercised file creation yet. Arbitrary hooks,
+project-defined primitives, model-generated code slots, and capability-to-capability composition are
+excluded.
 
-Fidelity and the other gates run against versioned, scoped fixtures representing the state before the first
-implementation. Determinism is not "same parameters → same repository". It is:
+Fidelity and the other gates run against versioned, scoped fixtures materialized from a recorded clean Git
+baseline. The baseline is cheap task-start evidence, not a continuous edit ledger. If the task did not start
+from a clean worktree, or its baseline was not recorded, SEH cannot distinguish pre-existing edits from the
+accepted change and must refuse capture. A fixture must never be reconstructed by subtracting the final
+snapshot. Repository multiplicity also does not prove recurrence: capability candidates require repeated
+change events, not merely similar structures. The first spike has not yet exercised fidelity or
+generalization correctly; its evidence and open questions are recorded in
+[`PHASE0_FINDINGS.md`](PHASE0_FINDINGS.md). Determinism is not "same parameters → same repository". It is:
 
 ```text
 capability + parameters + compatible base state → same operation plan and patch
@@ -155,9 +171,9 @@ runtime and evidence policy remain roadmap capabilities; see `docs/ROADMAP.md`.
    compatible base state, an operation produces the same plan and patch over declared files or fails loudly.
    A capability whose structural anchor has drifted must not guess.
 5. **A candidate must clear all four gates — fidelity, generalization, idempotency, safe refusal.**
-   Reproducing its own first example proves fidelity, not reuse: a capability that merely memorized one case
-   passes gate 1 and fails the product. A refused capability is better than one that emits almost-correct
-   code deterministically.
+   Reproducing its declared structural subset proves fidelity, not reuse: a capability that merely memorized
+   one case passes gate 1 and fails the product. A refused capability is better than one that emits
+   almost-correct code deterministically.
 6. **Capture is developer-confirmed.** Recurrence cannot be known from a single occurrence, so SEH never
    installs a capability on its own initiative — the agent may offer, the developer decides.
 7. SEH must install and operate without requiring any externally installed server. Third-party tools may be

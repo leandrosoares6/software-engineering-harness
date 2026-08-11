@@ -78,7 +78,8 @@ Nota metodológica crítica: o **onboarding do Serena é executado pelo LLM e co
 - [ ] Natureza do projeto: OSS público, portfólio, interno ou comercial? *Assumption atual: portfólio/exercício técnico com distribuição OSS*; `license = "Apache-2.0"` no PR #1 indica intenção de publicar, mas a motivação declarada é aprendizado, não adoção de terceiros.
 - [ ] Qual o tamanho e a forma do projeto POC? Precisa ser grande o bastante para o custo de leitura aparecer, pequeno o bastante para iterar.
 - [ ] Como isolar variância do LLM entre sessões? Mesma tarefa gera consumo diferente por não-determinismo; quantas repetições para significância?
-- [ ] O plano técnico existente (`plans/engineering_ir_context_package.md`) foi escrito para Java/Tree-sitter e precisa ser reescrito para Python/`ast` antes de virar trabalho executável.
+- [ ] O plano técnico do Context Compiler (mantido fora do versionamento) foi escrito para Java/Tree-sitter e precisa ser reescrito para Python/`ast` antes de virar trabalho executável — e reduzido à fatia mínima, já que o M1b saiu do caminho crítico.
+- [ ] Qual o tipo de âncora AST do MVP para inserção em arquivo existente? Precisa ser um caso bem definido (ex.: bloco de subparser em `cli.py`), não um motor genérico.
 
 ---
 
@@ -233,7 +234,7 @@ O Caminho B alimenta o Caminho A: cada padrão que se repete vira operação gra
 
 **Fase 2: Adaptador Python + consulta de símbolo**
 - **Objetivo**: alavanca de exploração e, sobretudo, o substrato AST de que a Fase 4 depende.
-- **Escopo**: `python_adapter.py` via `ast` da stdlib (fatia mínima de `plans/engineering_ir_context_package.md`: sem Engineering IR, sem budget); plugar no indexador existente; `seh inspect`/`seh neighbors` sobre o POC.
+- **Escopo**: `python_adapter.py` via `ast` da stdlib — fatia mínima do Context Compiler: só parse, qualified name e spans, sem Engineering IR e sem budget; plugar no indexador existente; `seh inspect`/`seh neighbors` sobre o POC.
 - **Sinal de sucesso**: localizar símbolo e relações consome visivelmente menos bytes que grep + leitura de arquivo.
 
 **Fase 3: Runner + compressor de evidência**
@@ -288,7 +289,7 @@ O Caminho B alimenta o Caminho A: cada padrão que se repete vira operação gra
 | Papel do Serena | Benchmark de pesquisa opcional | Dependência de produto (versão anterior desta decisão) | Revertido nesta sessão — autor não quer instalação externa obrigatória |
 | Linguagem do runtime v1 | Python | Java (seguindo o indexador atual) | O POC e o SEH são Python; autor concordou em migrar o paradigma |
 | PR #1 (indexador AST Java) | Congelar como referência de arquitetura | Reverter; estender em Java | Disciplina de proveniência/fingerprint é reaproveitável; implementação Tree-sitter/Java é substituída por `ast`/Python |
-| `plans/engineering_ir_context_package.md` | Precisa ser reescrito para Python/`ast` | Executar como está (Java) | Plano foi escrito antes da decisão de migrar para Python; reescrita é pré-requisito para virar trabalho executável |
+| Plano técnico do Context Compiler | Mantido fora do versionamento; precisa ser reescrito para Python/`ast` | Executar como está (Java); versionar no repo | Escrito antes da decisão de migrar para Python. Desrastreado por decisão do autor — é material de trabalho, não documentação pública do projeto |
 | Escopo da alavanca de exploração no MVP | Fatia mínima do M1 (adaptador Python + `seh inspect`/`seh neighbors`) entra na Fase 1, não depois do veredito | (a) só evidência de runtime no MVP, exploração fica para M1 pleno depois; (b) M1 pleno (Engineering IR + budget) já no MVP | Rejeitada a opção (a) nesta sessão: leitura de exploração acontece em toda tarefa, não só em retry — cobrir só evidência deixa a maior fatia do custo intocada e o número da hipótese fica artificialmente pequeno. Rejeitada (b): `inspect`/`neighbors` já existem no CLI (M0), custam muito menos que o Engineering IR completo, e bastam para a Fase 1 |
 
 ---

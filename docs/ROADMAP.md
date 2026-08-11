@@ -12,7 +12,7 @@
 >
 > SEH is self-contained (no external server required) and ships as an MCP server so it works with any
 > MCP-speaking coding agent. The Java/Tree-sitter adapter from PR #1 is frozen; indexing moved to Python
-> via the stdlib `ast` module — see `plans/engineering_ir_context_package.md`.
+> via the stdlib `ast` module.
 
 ## M0 — Foundation
 - [x] CLI skeleton
@@ -30,8 +30,7 @@
       relations without grepping and reading whole files — a cost that shows up on *every* task, not just
       the error-retry loop, which is why it could not wait for the full M1.
 - [ ] **M1b (after the MVP verdict)**: Engineering IR v0.1 schema, task validation, budgeted/prioritized
-      context package generation, blast-radius analysis — the full Context Compiler from
-      `plans/engineering_ir_context_package.md`.
+      context package generation, blast-radius analysis — the full Context Compiler.
 
 Deliberately minimal: enough for evidence to reference `file:line:symbol` and for the agent to query
 structure directly, not an attempt to match Serena/Aider in indexing depth or language coverage.

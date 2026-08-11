@@ -37,11 +37,11 @@ repositories), tracked-worktree fingerprint, index timestamp, indexer version,
 and schema version. Read operations reject stale or incompatible evidence.
 
 This layer is deliberately minimal — enough for evidence to reference
-`file:line:symbol`, not an attempt to match the indexing depth or language
-coverage of Serena or Aider. The Java/Tree-sitter adapter built in PR #1 is
-frozen as an architectural reference (it originated the provenance/fingerprint
-discipline described above) but is out of the default indexing path; see
-`plans/engineering_ir_context_package.md`.
+`file:line:symbol` and for recorded operations to anchor structural insertions,
+not an attempt to match the indexing depth or language coverage of Serena or
+Aider. The Java/Tree-sitter adapter built in PR #1 is frozen as an architectural
+reference (it originated the provenance/fingerprint discipline described above)
+but is out of the default indexing path.
 
 ### seh-operations *(the product)*
 Records and replays composite, project-specific engineering operations — the live-template layer.

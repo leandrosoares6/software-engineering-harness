@@ -1,3 +1,6 @@
+# Local, machine-specific SEH state: graph database, caches, evidence, measurements.
+# The versioned procedural memory lives in .seh-capabilities/ and is deliberately NOT ignored —
+# capabilities exist to be reviewed in pull requests and shared by the team.
 .seh/
 __pycache__/
 *.py[cod]

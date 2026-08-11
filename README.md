@@ -19,6 +19,18 @@ The first milestone intentionally contains **no LLM integration**. It proves the
 5. **Context is compiled.** Agents receive the smallest useful context package, not the repository by default.
 6. **Model agnostic.** SEH should wrap coding agents rather than become one.
 
+## Product vision
+
+SEH is the project's versioned procedural memory. A coding agent handles a new pattern once; when that
+pattern proves reusable, it can be crystallized as a deterministic capability. Instantiating that capability
+produces an operation the project can execute, verify, and measure without inference. The developer continues
+to work through natural-language prompts, while recurring engineering procedures progressively move out of
+the model's context and into reviewable project capabilities.
+
+See [Product Scenario: A Python Project That Learns How It Is Built](docs/PRODUCT_SCENARIO.md) for the
+end-to-end developer experience and [SEH Capability Model](docs/CAPABILITY_MODEL.md) for the primitive,
+capability, and operation mechanics.
+
 ## Current CLI
 
 ```bash
@@ -37,21 +49,23 @@ legacy, or stale indexes and never create repository state.
 ## Architecture direction
 
 ```text
-Requirement
+Developer prompt
     │
     ▼
-Engineering IR
+External coding agent
     │
-    ├──────── Repository Graph
+    ├── novel work ──► reason and implement ──► propose capability
     │
-    ▼
-Context Compiler
-    │
-    ▼
-Agent Adapter
-    │
-    ▼
-Deterministic Runtime ──► Evidence ──► Policy / Escalation
+    └── learned work ──► select installed capability
+                              │
+                              ▼
+                    deterministic primitive plan
+                              │
+                              ▼
+                         operation patch
+                              │
+                              ▼
+                    verification and evidence
 ```
 
 ## v0.1 scope

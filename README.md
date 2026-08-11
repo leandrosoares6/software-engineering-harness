@@ -39,12 +39,21 @@ seh index
 seh inspect UserService
 seh neighbors UserService
 seh neighbors --id class:0123456789abcdef0123
+seh capability validate ./candidate --allow-verification
 ```
 
 `inspect` lists every partial match with its stable node ID and qualified name.
 `neighbors` succeeds only for an unambiguous query; when several nodes match, it
 lists candidates that can be selected with `--id`. Read commands reject missing,
 legacy, or stale indexes and never create repository state.
+
+`capability validate` is the hand-built Phase 0 vertical slice. It loads a restricted
+`seh.capability.phase0/v0.1` candidate, executes fidelity, developer-approved generalization,
+idempotency, and safe-refusal gates in memory, and runs declared verification commands in a temporary
+working copy. It validates candidates but never installs or runs them against the working tree. Verification
+is denied by default: review the candidate locally, especially every command, then opt in with
+`--allow-verification`. Commands use an argument vector with no shell and a bounded timeout, but they are not
+an operating-system sandbox.
 
 ## Architecture direction
 

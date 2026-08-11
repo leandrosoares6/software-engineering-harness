@@ -7,6 +7,7 @@ import sys
 import pytest
 
 from conftest import git
+from seh.capability_cli import cmd_validate
 from seh.cli import build_parser, cmd_index, cmd_init, cmd_inspect, cmd_neighbors, main
 from seh.errors import IndexingError, StateError
 
@@ -109,6 +110,19 @@ def test_argument_parser_requires_deterministic_neighbor_selection():
 
     assert by_query.query == "Thing" and by_query.node_id is None
     assert by_id.query is None and by_id.node_id == "class:123"
+
+
+def test_argument_parser_exposes_nested_capability_validate():
+    parser = build_parser()
+    args = parser.parse_args(["capability", "validate", "./candidate"])
+    allowed = parser.parse_args(
+        ["capability", "validate", "./candidate", "--allow-verification"]
+    )
+
+    assert args.candidate == "./candidate"
+    assert args.allow_verification is False
+    assert allowed.allow_verification is True
+    assert args.handler is cmd_validate
 
 
 def test_main_converts_expected_errors_to_exit_code_two(monkeypatch, capsys):

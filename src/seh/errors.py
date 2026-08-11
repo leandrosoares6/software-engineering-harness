@@ -23,3 +23,15 @@ class SchemaError(StorageError):
 
 class IndexingError(SehError):
     """Raised when a language adapter cannot build a reliable index."""
+
+
+class CapabilityError(SehError):
+    """Raised when a capability candidate is invalid or cannot be evaluated."""
+
+
+class CapabilityRefusal(CapabilityError):
+    """Raised when a capability safely refuses an incompatible invocation."""
+
+
+class CapabilityValidationError(CapabilityError):
+    """Raised when one or more capability validation gates fail."""

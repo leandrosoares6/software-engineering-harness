@@ -232,7 +232,7 @@ genuinely recurring procedure requires file creation.
 
 Phase 0 closes only when all of these are true:
 
-- [ ] `validate` exists as the manually implemented group-creation event and is not used as fidelity data;
+- [x] `validate` exists as the manually implemented group-creation event and is not used as fidelity data;
 - [ ] `install` starts from a recorded clean Git baseline and is accepted as a real project change;
 - [ ] the captured expected patch declares only the accepted structural subset of `install`;
 - [ ] `add-capability-subcommand` reproduces that subset byte-for-byte;

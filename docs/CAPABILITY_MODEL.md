@@ -131,6 +131,11 @@ the snapshot-multiplicity error: a real recurring procedure must demand it first
 conditional on prospectively captured, developer-accepted change events. See
 [`PHASE0_FINDINGS.md`](PHASE0_FINDINGS.md).
 
+The implementation under `experiments/phase0/` is frozen evidence for that hypothesis, not the runtime
+authority. `src/seh/source_edit.py` is the normative product implementation. A primitive migrates from the
+experiment only when a retained real capability requires it; the validator does not add primitives merely
+to keep the experiment and product vocabularies numerically identical.
+
 Each structural primitive supports one declared syntactic form and refuses the others. For example,
 `splice.into_collection` for a list literal is not a generic “register this value somewhere” operation. A
 set literal, dictionary, `.extend()` call, decorator registry, and annotation-based registry are different
@@ -176,63 +181,81 @@ A capability candidate is an agent-authored package such as:
 └── add-capability-subcommand/
     ├── capability.yaml
     ├── templates/
-    │   ├── handler.py.j2
-    │   └── parser-registration.py.j2
+    │   ├── handler.py.tmpl
+    │   └── parser-registration.py.tmpl
     └── examples/
         ├── fidelity/
         │   ├── before/
+        │   ├── case.yaml
         │   └── expected.patch
         ├── generalization/
         │   ├── before/
+        │   ├── case.yaml
         │   └── expected.patch
-        ├── idempotency/
         └── refusal/
+            ├── before/
+            └── case.yaml
 ```
 
-The schema is `seh.capability/v0.1`. A conceptual manifest is:
+The hand-built validator uses the deliberately restricted schema
+`seh.capability.phase0/v0.1`. It is evidence for the runtime mechanics, not the final
+`seh.capability/v0.1` public format. The current manifest is:
 
 ```yaml
-schema: seh.capability/v0.1
+schema: seh.capability.phase0/v0.1
 id: seh.add-capability-subcommand
 version: 1
-
-intent:
-  summary: Add a subcommand to the existing seh capability command group
-  use_when:
-    - The capability command group already exists and needs another subcommand
-  do_not_use_when:
-    - The capability command group does not exist yet
 
 parameters:
   name:
     type: python_identifier
 
-applicability:
-  all:
-    - python_symbol_exists: seh.capability_cli.build_capability_parser
+preconditions:
+  - uses: text.absent
+    with:
+      file: src/seh/capability_cli.py
+      value: "def cmd_{{ name }}("
 
 steps:
   - uses: splice.after
     with:
+      file: src/seh/capability_cli.py
+      locator: python.symbol
       selector: last_function_with_prefix
       prefix: cmd_
-      template: templates/handler.py.j2
+      template: templates/handler.py.tmpl
   - uses: splice.before
     with:
-      symbol: seh.capability_cli.build_capability_parser
-      anchor: return
-      template: templates/parser-registration.py.j2
+      file: src/seh/capability_cli.py
+      locator: python.statement
+      function: configure_capability_parser
+      statement: return
+      lead: "\n"
+      template: templates/parser-registration.py.tmpl
 
 verification:
   - uses: verify.command
     with:
-      command: pytest
+      executable: pytest
       args:
-        - tests/test_capability_cli.py
+        - tests/test_capability.py
+      timeout_seconds: 30
+      expected_exit: 0
 ```
 
-Arbitrary `before` and `after` hooks are excluded. In the MVP, project commands may appear only as declared
-verification with explicit executable, arguments, timeout, and expected exit status.
+`case.yaml` supplies typed parameters; the generalization case additionally requires `approved: true`.
+Idempotency reuses the fidelity fixture and applies the same candidate twice. Arbitrary `before` and `after`
+hooks are excluded. Verification has an explicit executable, argument vector, timeout, and expected exit
+status; it runs with `shell=False` inside a temporary fixture copy. Manifest, template, and fixture paths are
+size-limited and confined against traversal. Fixture enumeration applies its file limit incrementally and
+rejects every symlink instead of following it.
+
+The temporary copy protects the working tree from the structural plan; it is not an operating-system
+sandbox for `verify.command`. A verification executable can still access whatever the invoking user can
+access. `validate` therefore refuses to execute commands by default. The developer must first review the
+candidate locally and then pass `--allow-verification`; this flag is an explicit trust decision, not a
+sandbox. Team review of an installed capability in a later PR is a separate boundary and cannot replace the
+pre-execution review. Future sandboxing must not be implied by the current implementation.
 
 ## Base-state fixtures and the four gates
 
@@ -254,7 +277,7 @@ The captured bytes become scoped fixtures of declared files, not long-lived Git 
 survives later rebases and squash merges because it stores the real state directly. It contains only the
 minimum state needed to exercise the capability.
 
-`seh capability validate` runs four gates:
+After local review, `seh capability validate --allow-verification` runs four gates:
 
 1. **Fidelity** — instantiate the candidate against the first `before/` fixture and reproduce the accepted
    **structural patch** over declared files. Behavioral edits outside the capability boundary are excluded

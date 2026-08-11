@@ -18,7 +18,7 @@ pytest experiments/phase0
 
 | Path | Role |
 | --- | --- |
-| `primitives.py` | The provisional algebra: AST locators returning byte spans, plus splice effects |
+| `primitives.py` | Frozen evidence for the provisional algebra: AST locators returning byte spans, plus splice effects |
 | `capabilities.py` | Three hand-authored capabilities composed from those primitives |
 | `fixtures/` | Byte-exact base states, with their recorded baseline |
 | `test_phase0.py` | Each finding as an executable assertion |
@@ -26,6 +26,11 @@ pytest experiments/phase0
 Capabilities are hand-written Python rather than manifests on purpose: Phase 0
 asks *which primitives are needed*, and answering that must not presuppose a
 schema, a CLI, or a validator.
+
+This experimental algebra is deliberately not normative. The product authority is
+`../../src/seh/source_edit.py`, which adopts only the primitives demanded by retained real capabilities.
+Differences between the two are evidence of staged migration, not an invitation to add unused product
+primitives merely for parity.
 
 ## Fixtures are captured, not derived
 

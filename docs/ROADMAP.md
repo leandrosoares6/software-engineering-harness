@@ -57,19 +57,19 @@ structure directly, not an attempt to match Serena/Aider in indexing depth or la
       [`PHASE0_FINDINGS.md`](PHASE0_FINDINGS.md)
 - [x] **third shape-adjacent capability**: `add-java-relation-kind` reused all four predicted primitives and
       confirmed that nested scope addressing is a locator refinement, not a new primitive
-- [ ] **complete the Phase 0 gate with required product events**: implement `seh capability validate` by
-      hand as one-time group setup; from a recorded clean Git baseline, implement and capture `install` as
-      the first clean subcommand event; derive `add-capability-subcommand`; generate developer-approved `run`
-      as generalization. The validator judging a candidate learned from `install` is machinery judging data,
-      not a circular dependency. Everything below is conditional on this
+- [ ] **complete the Phase 0 gate with required product events**: `seh capability validate` is implemented by
+      hand as one-time group setup and excluded from fidelity data; after committing it, record a new clean
+      Git baseline, implement and capture `install`, derive `add-capability-subcommand`, then generate
+      developer-approved `run` as generalization. The validator judging a candidate learned from `install`
+      is machinery judging data, not a circular dependency. Everything below is conditional on this
 - [ ] `seh.capability/v0.1` format — intent, typed parameters, applicability, preconditions, primitive steps,
       templates, fixtures, verification, provenance
 - [ ] closed, versioned primitive vocabulary — only primitives exercised by real retained events;
       `file.render` remains excluded until a recurring procedure genuinely creates files
 - [ ] source-preserving Python edits — AST locates and validates exact spans; textual splice writes; never
       mutate and `ast.unparse()` the module
-- [ ] `seh capability validate ./candidate` — runs the four gates against an agent-authored candidate and
-      scoped pre-implementation fixtures
+- [x] `seh capability validate ./candidate` — restricted Phase 0 profile runs the four gates against an
+      agent-authored candidate and scoped pre-implementation fixtures; the final public schema remains open
 - [ ] `seh capability install ./candidate` — promotes a validated candidate into the catalogue; a rejected
       candidate never reaches it
 - [ ] **the four gates**: fidelity (rebuilds its own first example), generalization (produces a correct

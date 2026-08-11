@@ -7,6 +7,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from . import __version__
+from .capability_cli import configure_capability_parser
 from .config import SehConfig
 from .errors import IndexingError, SehError, StateError
 from .git import head, repository_root, state_fingerprint
@@ -148,6 +149,8 @@ def build_parser() -> argparse.ArgumentParser:
     selection.add_argument("--id", dest="node_id")
     neighbors_command.add_argument("--repo")
     neighbors_command.set_defaults(handler=cmd_neighbors)
+
+    configure_capability_parser(subcommands)
     return parser
 
 

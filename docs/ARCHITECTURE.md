@@ -60,14 +60,17 @@ Lifecycle: **establish Git baseline** (the coding task starts in a clean worktre
 (the *developer* decides — after one occurrence recurrence can only be predicted, not known) → **materialize
 capture** (copy the declared `before` bytes from the recorded baseline and the accepted structural patch from
 the diff) → **propose** (the external agent authors a candidate: manifest, templates, and fixtures, paying
-the generalization cost once) → **validate**
-(`seh capability validate` runs the four gates below) → **install** (`seh capability install` promotes the
-candidate into `.seh-capabilities/`, versioned and reviewable in a PR) → **run** (`seh capability run`
+the generalization cost once) → **review candidate locally** (the developer inspects the manifest,
+templates, fixtures, and every declared command) → **validate**
+(`seh capability validate --allow-verification` runs the four gates below after an
+explicit trust decision) → **install** (`seh capability install` promotes the candidate into
+`.seh-capabilities/`, versioned and reviewable by the team in a PR) → **run** (`seh capability run`
 instantiates a deterministic operation with no inference in the path) → **verify**
 (`seh-runtime` executes the suite) → **measure** (`seh-evidence` records tokens and latency avoided).
 
-SEH does not author with an LLM. The agent writes the candidate; SEH only judges it. `validate` and `install`
-are separate commands because a rejected candidate must never reach the catalogue.
+SEH does not author with an LLM. The agent writes the candidate; SEH only judges it. Local review before
+validation protects the machine executing candidate-declared commands; PR review after installation protects
+the shared catalogue. `validate` and `install` are separate because a rejected candidate must never reach it.
 
 Generalization — separating structure from domain in a concrete implementation — belongs to the external
 agent, which has just written the code and knows which parts carry meaning. SEH never infers that boundary.

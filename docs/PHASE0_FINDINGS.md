@@ -6,6 +6,11 @@ Status: **initial spike complete; Phase 0 and the thesis gate remain open.** Spe
 Phase 0 hand-authored three capabilities of different shapes and ran them over real source files in this
 repository. The spike is read-only: it never wrote to the working tree.
 
+The evidence below is reproducible. The distilled experiment — primitives, capabilities, captured fixtures
+and the findings as executable assertions — lives in
+[`experiments/phase0/`](../experiments/phase0/README.md) and runs with `pytest experiments/phase0`. It sits
+outside the runtime and outside the product test suite, so an experiment can never gate the build.
+
 ## Capabilities chosen
 
 | Capability | Real occurrences | Shape |

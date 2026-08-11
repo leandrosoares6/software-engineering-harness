@@ -31,6 +31,10 @@ where = ["src"]
 
 [tool.pytest.ini_options]
 pythonpath = ["src"]
+# The product suite is `tests/`. `experiments/` holds frozen Phase 0 evidence and
+# is run on demand (`pytest experiments/phase0`), so an experiment can never gate
+# the build or inflate the product's test count.
+testpaths = ["tests"]
 
 [tool.coverage.run]
 branch = true

@@ -1,0 +1,12 @@
+# Phase 0 base-state fixtures
+
+Byte-exact copies of the source files as they existed when the spike ran.
+Frozen deliberately: the findings show a fixture must store real bytes, never be
+reconstructed later by subtracting from a snapshot.
+
+commit: 8198f758b08b12a65eca68ff2f6bb575893b912f
+tree:   c5d8466f196074222ffa4b6e1d5828213d999c42
+
+sha256  cli.py  a0877351bb7253b995fb1a46d7bf9ce7798408d25aff6a28f13abe22c5cd8b60
+sha256  models.py  ca657ceff0878b5208e599f9b1f404a124d2ce73a68afe4f714d7e02fa4039d1
+sha256  java_adapter.py  ef832795ad64664c2bcd8eaa4ea719436c4634ad4de72d3525c604f6e760f283

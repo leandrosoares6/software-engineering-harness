@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Any
+
 
 class SehError(RuntimeError):
     """Base class for expected, user-facing SEH failures."""
@@ -35,3 +37,7 @@ class CapabilityRefusal(CapabilityError):
 
 class CapabilityValidationError(CapabilityError):
     """Raised when one or more capability validation gates fail."""
+
+    def __init__(self, message: str, *, report: Any | None = None) -> None:
+        super().__init__(message)
+        self.report = report

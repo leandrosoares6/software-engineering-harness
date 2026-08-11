@@ -70,7 +70,7 @@ structure directly, not an attempt to match Serena/Aider in indexing depth or la
       mutate and `ast.unparse()` the module
 - [x] `seh capability validate ./candidate` — restricted Phase 0 profile runs the four gates against an
       agent-authored candidate and scoped pre-implementation fixtures; the final public schema remains open
-- [ ] `seh capability install ./candidate` — promotes a validated candidate into the catalogue; a rejected
+- [x] `seh capability install ./candidate` — promotes a validated candidate into the catalogue; a rejected
       candidate never reaches it
 - [ ] **the four gates**: fidelity (rebuilds its own first example), generalization (produces a correct
       second case, proposed by the agent and approved by the developer), idempotency (re-applying does not

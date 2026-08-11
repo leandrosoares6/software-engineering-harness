@@ -84,7 +84,13 @@ def _write_case(
         data["approved"] = approved
     (case / "case.yaml").write_text(yaml.safe_dump(data), encoding="utf-8")
     if expected is not None:
-        (case / "expected.patch").write_text(_patch(source, expected), encoding="utf-8")
+        expected_patch = _patch(source, expected)
+        (case / "expected.patch").write_text(expected_patch, encoding="utf-8")
+        (case / "accepted.patch").write_text(expected_patch, encoding="utf-8")
+        (case / "scope.yaml").write_text(
+            "rationale: structural subset selected from an accepted change\n",
+            encoding="utf-8",
+        )
 
 
 def candidate_package(tmp_path: Path) -> Path:
@@ -175,6 +181,13 @@ def _validate(candidate: Path):
     return validate_candidate(candidate, allow_verification=True)
 
 
+def set_different_expected_patch(candidate: Path) -> None:
+    case = candidate / "examples/fidelity"
+    different = _patch(BASE_SOURCE, BASE_SOURCE + b"# unexpected\n")
+    (case / "expected.patch").write_text(different, encoding="utf-8")
+    (case / "accepted.patch").write_text(different, encoding="utf-8")
+
+
 def test_validate_candidate_passes_all_four_gates(tmp_path):
     report = _validate(candidate_package(tmp_path))
 
@@ -226,8 +239,7 @@ def test_load_candidate_rejects_paths_outside_package(tmp_path):
 
 def test_fidelity_reports_a_different_patch(tmp_path):
     candidate = candidate_package(tmp_path)
-    expected = candidate / "examples" / "fidelity" / "expected.patch"
-    expected.write_text("not the accepted patch\n", encoding="utf-8")
+    set_different_expected_patch(candidate)
 
     report = _validate(candidate)
 
@@ -306,9 +318,7 @@ def test_capability_validate_command_prints_each_gate(tmp_path, capsys):
 
 def test_capability_validate_command_raises_for_failed_gate(tmp_path, capsys):
     candidate = candidate_package(tmp_path)
-    (candidate / "examples/fidelity/expected.patch").write_text(
-        "wrong\n", encoding="utf-8"
-    )
+    set_different_expected_patch(candidate)
 
     with pytest.raises(CapabilityValidationError, match="fidelity"):
         cmd_validate(Namespace(candidate=str(candidate), allow_verification=True))
@@ -358,9 +368,7 @@ def test_capability_validate_cli_has_deterministic_exit_codes(
         main()
     assert success.value.code == 0
 
-    (candidate / "examples/fidelity/expected.patch").write_text(
-        "wrong\n", encoding="utf-8"
-    )
+    set_different_expected_patch(candidate)
     with pytest.raises(SystemExit) as failure:
         main()
     assert failure.value.code == 2
@@ -524,6 +532,57 @@ def test_case_files_are_required_and_must_be_well_formed(tmp_path):
     case["approved"] = "yes"
     case_path.write_text(yaml.safe_dump(case), encoding="utf-8")
     with pytest.raises(CapabilityError, match="approved must be boolean"):
+        _validate(candidate)
+
+
+def test_expected_patch_hunks_must_be_contained_in_accepted_patch(tmp_path):
+    candidate = candidate_package(tmp_path)
+    accepted = candidate / "examples/fidelity/accepted.patch"
+    accepted.write_text(
+        "--- a/other.py\n+++ b/other.py\n@@ -1 +1 @@\n-old\n+new\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(CapabilityError, match="not contained in accepted.patch"):
+        _validate(candidate)
+
+
+def test_accepted_patch_may_include_git_envelope_and_unrelated_hunks(tmp_path):
+    candidate = candidate_package(tmp_path)
+    case = candidate / "examples/fidelity"
+    expected = (case / "expected.patch").read_text(encoding="utf-8")
+    accepted = (
+        "diff --git a/cli.py b/cli.py\n"
+        "index 1111111..2222222 100644\n"
+        f"{expected}"
+        "diff --git a/other.py b/other.py\n"
+        "--- a/other.py\n"
+        "+++ b/other.py\n"
+        "@@ -1 +1 @@\n"
+        "-old\n"
+        "+new\n"
+    )
+    (case / "accepted.patch").write_text(accepted, encoding="utf-8")
+
+    assert _validate(candidate).passed
+
+
+@pytest.mark.parametrize("artifact", ["accepted.patch", "scope.yaml"])
+def test_scope_evidence_is_required_for_expected_cases(tmp_path, artifact):
+    candidate = candidate_package(tmp_path)
+    (candidate / "examples/fidelity" / artifact).unlink()
+
+    with pytest.raises(CapabilityError, match=artifact):
+        _validate(candidate)
+
+
+def test_scope_yaml_must_be_a_safe_mapping(tmp_path):
+    candidate = candidate_package(tmp_path)
+    (candidate / "examples/fidelity/scope.yaml").write_text(
+        "- narrative without keys\n", encoding="utf-8"
+    )
+
+    with pytest.raises(CapabilityError, match="scope must be a mapping"):
         _validate(candidate)
 
 

@@ -136,6 +136,15 @@ authority. `src/seh/source_edit.py` is the normative product implementation. A p
 experiment only when a retained real capability requires it; the validator does not add primitives merely
 to keep the experiment and product vocabularies numerically identical.
 
+The first retained event also defines a deliberately narrow command seam. New `capability` subcommands add
+two local-import adapters in `capability_cli.py`: `cmd_<name>` delegates to
+`capability_<name>.execute`, and the parent parser delegates to `capability_<name>.configure_parser`.
+Command-specific help, arguments, behavior, and presentation remain in that module. This module-per-command
+boundary is useful without capability capture once command bodies grow, and it lets the recurring wiring vary
+only by a validated Python identifier instead of accepting prose, argument lists, or arbitrary source as
+parameters. `cmd_validate` remains inline until after the `install` fixture is captured so a retrospective
+refactor cannot contaminate the first real event.
+
 Each structural primitive supports one declared syntactic form and refuses the others. For example,
 `splice.into_collection` for a list literal is not a generic “register this value somewhere” operation. A
 set literal, dictionary, `.extend()` call, decorator registry, and annotation-based registry are different
@@ -187,11 +196,15 @@ A capability candidate is an agent-authored package such as:
         ├── fidelity/
         │   ├── before/
         │   ├── case.yaml
-        │   └── expected.patch
+        │   ├── accepted.patch
+        │   ├── expected.patch
+        │   └── scope.yaml
         ├── generalization/
         │   ├── before/
         │   ├── case.yaml
-        │   └── expected.patch
+        │   ├── accepted.patch
+        │   ├── expected.patch
+        │   └── scope.yaml
         └── refusal/
             ├── before/
             └── case.yaml
@@ -273,6 +286,13 @@ refuses capture because the true boundary between pre-existing work and the new 
 Fixtures must never be reconstructed later by deleting lines from the final snapshot: ordering and
 neighboring structure are historical facts, and subtraction can create a state that never existed.
 
+Each expected case preserves three distinct capture artifacts. `accepted.patch` is the complete accepted
+change, `expected.patch` is the structural subset claimed by the capability, and `scope.yaml` records the
+baseline plus human-readable inclusion and exclusion reasons. The rationale remains reviewable prose, but
+the containment claim is executable: validation requires every exact unified-diff hunk from
+`expected.patch` to occur in `accepted.patch` for the same file. Missing artifacts, malformed scope YAML,
+or a hunk not present in the accepted change fail closed.
+
 The captured bytes become scoped fixtures of declared files, not long-lived Git references. The fixture
 survives later rebases and squash merges because it stores the real state directly. It contains only the
 minimum state needed to exercise the capability.
@@ -288,7 +308,12 @@ After local review, `seh capability validate --allow-verification` runs four gat
    already-applied refusal, never a duplicate edit.
 4. **Safe refusal** — run it against an incompatible fixture; it must reject before writing anything.
 
-Only a candidate that clears all four can be promoted by `seh capability install`.
+Only a candidate that clears all four can be promoted by `seh capability install`. Installation first takes
+a bounded, byte-exact snapshot of regular candidate files, stages it inside ignored local `.seh/` state,
+revalidates that snapshot, and rejects any change to it during verification. It then promotes the directory
+atomically to `.seh-capabilities/<capability-id>` under the canonical Git root. Symlinks, special files, concurrent
+installation, and replacement of an existing capability are refused; a failed gate or promotion leaves no
+partial catalogue entry.
 
 ## Replay contract
 

@@ -40,6 +40,7 @@ seh inspect UserService
 seh neighbors UserService
 seh neighbors --id class:0123456789abcdef0123
 seh capability validate ./candidate --allow-verification
+seh capability install ./candidate --allow-verification
 ```
 
 `inspect` lists every partial match with its stable node ID and qualified name.
@@ -54,6 +55,12 @@ working copy. It validates candidates but never installs or runs them against th
 is denied by default: review the candidate locally, especially every command, then opt in with
 `--allow-verification`. Commands use an argument vector with no shell and a bounded timeout, but they are not
 an operating-system sandbox.
+
+`capability install` stages a byte-exact snapshot under ignored local `.seh/` state, revalidates it, and
+promotes it atomically to
+`.seh-capabilities/<capability-id>` under the canonical Git root. It applies the same explicit verification
+trust boundary as `validate`, refuses symlinks and special files, and never overwrites an installed
+capability. A failed gate or promotion leaves no partial capability in the catalogue.
 
 ## Architecture direction
 

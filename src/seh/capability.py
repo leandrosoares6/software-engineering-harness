@@ -320,6 +320,57 @@ def _validate_parameters(candidate: Candidate, values: dict[str, Any]) -> None:
             raise CapabilityRefusal(f"parameter {name!r} must be a python_identifier")
 
 
+def _patch_hunks(patch: str, label: str) -> tuple[tuple[str, str], ...]:
+    lines = patch.splitlines(keepends=True)
+    hunks: list[tuple[str, str]] = []
+    path: str | None = None
+    index = 0
+    while index < len(lines):
+        line = lines[index]
+        if line.startswith("+++ "):
+            path = line[4:].rstrip("\r\n").split("\t", 1)[0]
+            index += 1
+            continue
+        if line.startswith("@@ "):
+            if path is None:
+                raise CapabilityError(f"{label} contains a hunk without a file")
+            start = index
+            index += 1
+            while index < len(lines) and not (
+                lines[index].startswith("@@ ")
+                or lines[index].startswith("diff --git ")
+                or lines[index].startswith("--- ")
+            ):
+                index += 1
+            hunks.append((path, "".join(lines[start:index])))
+            continue
+        index += 1
+    if not hunks:
+        raise CapabilityError(f"{label} contains no unified-diff hunks")
+    return tuple(hunks)
+
+
+def _validate_patch_scope(case_root: Path, name: str, expected_patch: str) -> None:
+    accepted_path = _inside(case_root, "accepted.patch", f"{name} accepted.patch")
+    if not accepted_path.is_file():
+        raise CapabilityError(f"missing {name} accepted.patch")
+    scope_path = _inside(case_root, "scope.yaml", f"{name} scope.yaml")
+    if not scope_path.is_file():
+        raise CapabilityError(f"missing {name} scope.yaml")
+    _mapping(_safe_yaml(scope_path, f"{name} scope"), f"{name} scope")
+    try:
+        accepted_patch = _read_limited(accepted_path).decode("utf-8")
+    except UnicodeDecodeError as exc:
+        raise CapabilityError(f"{name} accepted.patch is not UTF-8") from exc
+
+    accepted_hunks = set(_patch_hunks(accepted_patch, f"{name} accepted.patch"))
+    for hunk in _patch_hunks(expected_patch, f"{name} expected.patch"):
+        if hunk not in accepted_hunks:
+            raise CapabilityError(
+                f"{name} expected.patch hunk is not contained in accepted.patch"
+            )
+
+
 def _load_case(candidate: Candidate, name: str, *, expected: bool) -> Case:
     relative_root = f"examples/{name}"
     _inside(candidate.root, relative_root, f"{name} case")
@@ -358,6 +409,7 @@ def _load_case(candidate: Candidate, name: str, *, expected: bool) -> Case:
             expected_patch = _read_limited(patch_path).decode("utf-8")
         except UnicodeDecodeError as exc:
             raise CapabilityError(f"{name} expected.patch is not UTF-8") from exc
+        _validate_patch_scope(case_path.parent, name, expected_patch)
     approved = raw.get("approved")
     if approved is not None and not isinstance(approved, bool):
         raise CapabilityError(f"{name} approved must be boolean")

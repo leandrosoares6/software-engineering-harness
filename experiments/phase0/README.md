@@ -8,6 +8,11 @@ Conclusions live in [`../../docs/PHASE0_FINDINGS.md`](../../docs/PHASE0_FINDINGS
 the model they feed is [`../../docs/CAPABILITY_MODEL.md`](../../docs/CAPABILITY_MODEL.md).
 This directory only makes them re-runnable.
 
+`real_capture/` contains the first prospectively grounded event: the accepted `install` change, its declared
+structural subset, and the still-unapproved `run` wiring proposal. See
+[`real_capture/README.md`](real_capture/README.md) before treating the deliberately incomplete candidate as
+installable.
+
 ## Running it
 
 ```bash

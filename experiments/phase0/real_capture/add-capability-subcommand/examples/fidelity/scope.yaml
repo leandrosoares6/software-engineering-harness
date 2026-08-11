@@ -1,0 +1,54 @@
+baseline:
+  commit: 717e87797ec2623fa0ce8de1e3b7424db3f14777
+  tree: f496004314c6f880f7dae4d7a7b6bcb50671da7c
+accepted:
+  commit: abbb477cfb40671ec5a2f0d22e53be5dbea67248
+  tree: 9c9ce3fc7175184777cf95a3eed9998ed2a5fee5
+artifacts:
+  before_sha256: 523af36bcf146813857302b647a5a4537891d1cfeea60d251af071ab882560e0
+  accepted_patch_sha256: 5b1b679bfc0d8a4bdda9e620f4f22ca0fb4ba354f7ee228a4306af3682ac721f
+  expected_patch_sha256: fc2c351d8814bd9d87b29f60840ff48c6e88f90d1c262964b117e6c7bcc126ab
+included:
+- path: src/seh/capability_cli.py
+  hunks: 2
+  reason: two thin local-import adapters parameterized only by command name
+excluded:
+- path: .claude/PRPs/prds/seh-runtime-evidencia-medicao.prd.md
+  reason: product decision record, not recurring command wiring
+- path: README.md
+  reason: user documentation
+- path: docs/CAPABILITY_MODEL.md
+  reason: capability model documentation
+- path: docs/PHASE0_FINDINGS.md
+  reason: experiment findings
+- path: docs/ROADMAP.md
+  reason: roadmap state
+- path: src/seh/capability.py
+  reason: validator and capture-proof behavior, not subcommand wiring
+- path: src/seh/capability_catalog.py
+  reason: install domain behavior and atomic storage
+- path: src/seh/capability_install.py
+  reason: command-specific parser configuration, behavior, and presentation
+- path: src/seh/errors.py
+  reason: validation error transport
+- path: tests/test_capability.py
+  reason: validator verification, not generated product structure
+- path: tests/test_capability_install.py
+  reason: install verification, not generated product structure
+metrics:
+  accepted_files: 12
+  accepted_insertions: 831
+  accepted_deletions: 13
+  structural_files: 1
+  structural_insertions: 10
+  structural_share_of_insertions: 0.012
+  interpretation: value is navigation and shape reuse, not bulk code generation; measure
+    reduced rediscovery and retries across repeated invocations
+honesty_test:
+  would_refactor_without_capture: yes; module-per-command separates growing command
+    behavior from wiring even without the capability experiment
+  why_validate_stays_inline: refactoring previously committed validate now would contaminate
+    the historical install event
+  why_no_file_render: the capability generates only existing-file wiring; command
+    modules remain ordinary behavioral work until repeated file-creation evidence
+    exists

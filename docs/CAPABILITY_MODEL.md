@@ -289,9 +289,10 @@ neighboring structure are historical facts, and subtraction can create a state t
 Each expected case preserves three distinct capture artifacts. `accepted.patch` is the complete accepted
 change, `expected.patch` is the structural subset claimed by the capability, and `scope.yaml` records the
 baseline plus human-readable inclusion and exclusion reasons. The rationale remains reviewable prose, but
-the containment claim is executable: validation requires every exact unified-diff hunk from
-`expected.patch` to occur in `accepted.patch` for the same file. Missing artifacts, malformed scope YAML,
-or a hunk not present in the accepted change fail closed.
+the containment claim is executable: validation requires every unified-diff hunk from `expected.patch` to
+occur in `accepted.patch` with the same file, ranges, and body. Only Git's optional section label after the
+second `@@` is normalized because the runtime renderer does not emit it. Missing artifacts, malformed scope
+YAML, or a hunk not present in the accepted change fail closed.
 
 The captured bytes become scoped fixtures of declared files, not long-lived Git references. The fixture
 survives later rebases and squash merges because it stores the real state directly. It contains only the

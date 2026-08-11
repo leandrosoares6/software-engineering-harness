@@ -567,6 +567,16 @@ def test_accepted_patch_may_include_git_envelope_and_unrelated_hunks(tmp_path):
     assert _validate(candidate).passed
 
 
+def test_scope_containment_ignores_only_git_hunk_section_labels(tmp_path):
+    candidate = candidate_package(tmp_path)
+    case = candidate / "examples/fidelity"
+    expected = (case / "expected.patch").read_text(encoding="utf-8")
+    git_labeled = expected.replace(" @@\n", " @@ def build_parser()\n")
+    (case / "accepted.patch").write_text(git_labeled, encoding="utf-8")
+
+    assert _validate(candidate).passed
+
+
 @pytest.mark.parametrize("artifact", ["accepted.patch", "scope.yaml"])
 def test_scope_evidence_is_required_for_expected_cases(tmp_path, artifact):
     candidate = candidate_package(tmp_path)

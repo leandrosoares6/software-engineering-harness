@@ -26,6 +26,7 @@ MAX_FIXTURE_FILES = 100
 SUPPORTED_STEPS = {"splice.after", "splice.before"}
 _PLACEHOLDER = re.compile(r"{{\s*([A-Za-z_][A-Za-z0-9_]*)\s*}}")
 _CAPABILITY_ID = re.compile(r"[a-z0-9][a-z0-9._-]*\Z")
+_HUNK_HEADER = re.compile(r"^(@@ -\d+(?:,\d+)? \+\d+(?:,\d+)? @@)[^\r\n]*(\r?\n)?$")
 
 
 @dataclass(frozen=True)
@@ -334,6 +335,9 @@ def _patch_hunks(patch: str, label: str) -> tuple[tuple[str, str], ...]:
         if line.startswith("@@ "):
             if path is None:
                 raise CapabilityError(f"{label} contains a hunk without a file")
+            header = _HUNK_HEADER.fullmatch(line)
+            if header is None:
+                raise CapabilityError(f"{label} contains an invalid hunk header")
             start = index
             index += 1
             while index < len(lines) and not (
@@ -342,7 +346,8 @@ def _patch_hunks(patch: str, label: str) -> tuple[tuple[str, str], ...]:
                 or lines[index].startswith("--- ")
             ):
                 index += 1
-            hunks.append((path, "".join(lines[start:index])))
+            normalized_header = header.group(1) + (header.group(2) or "")
+            hunks.append((path, normalized_header + "".join(lines[start + 1 : index])))
             continue
         index += 1
     if not hunks:

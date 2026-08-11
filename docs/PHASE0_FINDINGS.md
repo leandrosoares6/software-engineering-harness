@@ -120,9 +120,10 @@ behaviour from the deterministic scaffold.
 
 The first real capture makes that boundary auditable rather than implicit. It preserves the complete
 accepted diff as `accepted.patch`, the replayed structural diff as `expected.patch`, and the human rationale
-as `scope.yaml`; validation mechanically requires every expected hunk to occur exactly in the accepted patch
-for the same file. For `install`, the recurring scaffold is two thin local-import adapters, while parser
-details and command behavior live in a command-specific module excluded explicitly from fidelity.
+as `scope.yaml`; validation mechanically requires every expected hunk to have the same file, ranges, and body
+in the accepted patch, normalizing only Git's optional hunk section label. For `install`, the recurring
+scaffold is two thin local-import adapters, while parser details and command behavior live in a
+command-specific module excluded explicitly from fidelity.
 
 ## Third capability: executed, with a decisive result
 

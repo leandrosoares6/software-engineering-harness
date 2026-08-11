@@ -4,12 +4,23 @@
 
 A coding agent should not spend model tokens rediscovering facts that the software environment can compute. SEH separates deterministic engineering operations from probabilistic reasoning and introduces explicit escalation boundaries.
 
+Before AI agents, IDEs already automated much of this deterministically: IntelliSense, live templates,
+"Generate →", refactorings that composed whole classes for a single purpose. Agents redo that same work
+probabilistically — slower, costlier, and error-prone. SEH's core idea is to give that determinism back:
+**record a project-specific engineering operation once (LLM-assisted, expensive), replay it forever with no
+inference in the path (~0 tokens, milliseconds).** It is the IntelliJ live template, for agents, measured.
+
+Cost is tracked on **two axes, not one**: tokens *and* latency. Replacing an inference round-trip (3–8s)
+with an AST operation (ms) is measured at 8.7x latency improvement and up to 99% token savings on repeated
+tasks — latency is often the more perceptible win day to day.
+
 SEH is **self-contained**: it does not require an externally installed server to operate, and it ships as
 an MCP server so it works unmodified across MCP-speaking coding agents (Claude Code, Codex, Kimi CLI, and
-others). The primary differentiator is not repository indexing — that layer is already solved by mature
-open-source tools (Serena's MCP+LSP toolkit, Aider's tree-sitter repo-map) — it is **compressing the cost of
-runtime execution and re-try loops into measured, structured evidence**. Full rationale in
-`.claude/PRPs/prds/seh-runtime-evidencia-medicao.prd.md`.
+others). The differentiator is *not* repository indexing (solved by Serena and Aider) nor universal
+refactoring (solved by act101, OHM-MCP, Code Scalpel) — those are consumed or kept deliberately minimal.
+It is the **composite, project-specific operation**: one that both creates new files and inserts
+structurally into existing ones, which template scaffolders (cookiecutter, plop, hygen) cannot do. Full
+rationale in `.claude/PRPs/prds/seh-runtime-evidencia-medicao.prd.md`.
 
 ## Core components
 
@@ -31,6 +42,21 @@ coverage of Serena or Aider. The Java/Tree-sitter adapter built in PR #1 is
 frozen as an architectural reference (it originated the provenance/fingerprint
 discipline described above) but is out of the default indexing path; see
 `plans/engineering_ir_context_package.md`.
+
+### seh-operations *(the product)*
+Records and replays composite, project-specific engineering operations — the live-template layer.
+
+An operation (`seh.operation/v0.1`) declares parameters, effects, verification and provenance. Effects are
+of two kinds: creating new files from templates, and **AST-anchored insertion into existing files**. The
+second is the hard one, and the reason this layer cannot be a template scaffolder: adding a CLI subcommand
+means inserting a subparser block into an existing `cli.py`, not just writing a new module.
+
+Lifecycle: **record** (once, LLM-assisted, expensive) → **store** (`.seh/operations/`, versioned in the
+repository and reviewable in a PR) → **run** (deterministic, no inference in the path) → **verify**
+(`seh-runtime` executes the suite) → **measure** (`seh-evidence` records tokens and latency avoided).
+
+Replay is deterministic by contract: same operation and parameters produce byte-identical results, and an
+operation whose AST anchor no longer exists fails explicitly rather than generating plausible garbage.
 
 ### seh-ir
 Represents engineering intent, scope, constraints, verification requirements, budgets and escalation policy in a model-neutral form.
@@ -61,7 +87,13 @@ remain roadmap capabilities; see `docs/ROADMAP.md`.
 ## Architectural invariants
 
 1. No model should be invoked when the requested operation can be answered by a deterministic SEH capability with sufficient confidence.
-2. SEH must install and operate without requiring any externally installed server. Third-party tools may be
+2. **No inference in the replay path.** Once an operation is recorded, running it must never call a model.
+   Recording pays the model cost once; every replay after that is pure execution.
+3. **Deterministic or explicitly failed — never plausible.** A replay produces byte-identical results, or it
+   fails loudly. An operation whose AST anchor has drifted must not guess.
+4. SEH must install and operate without requiring any externally installed server. Third-party tools may be
    consumed optionally, never as a hard dependency.
-3. Local model integration and inter-model routing are explicitly deferred (see `docs/ROADMAP.md`, M4) — the
-   v1 differentiator is the runtime/evidence/measurement loop, not model selection.
+5. Every deterministic capability must be measurable in **both tokens and latency** — a capability that
+   cannot show its savings cannot justify its existence.
+6. Local model integration and inter-model routing are explicitly deferred (see `docs/ROADMAP.md`, M5) — the
+   v1 differentiator is recorded operations, not model selection.

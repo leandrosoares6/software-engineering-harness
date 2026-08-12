@@ -508,21 +508,32 @@ Tudo nesta subseção é fixado **antes** da primeira sessão. Um valor que mude
 
 `R = 3` sessões frias por arm, seis no total. A repetição não mede variância de tarefa — a tarefa é a mesma — e sim **não-determinismo do modelo**, que foi a fraqueza declarada do probe anterior (`n = 1` por arm, sem controle algum).
 
-#### O oráculo: quem decide que a edição está correta
+#### O oráculo: localização, não correção comportamental
 
 Executável, e decidido antes de rodar. Nenhum humano e nenhum modelo julga.
 
-**Critério primário — os testes do próprio commit-alvo.** Depois que o agente para, o harness copia para a árvore os arquivos de teste que o commit-alvo adicionou ou alterou, e os executa. A edição está correta quando eles passam, junto com a suíte pré-existente.
+**A edição conta quando seu caminho está no conjunto de arquivos-fonte que o commit-alvo modificou.** Esse conjunto é fato histórico, não escolha de autor. Somado a uma condição de não-regressão: a suíte pré-existente continua passando depois da sessão.
 
-Esses arquivos de teste **nunca ficam visíveis ao agente**: são gabarito, e vivem no futuro da árvore. Entram só depois que a sessão termina.
+Isto é uma **revisão**, e a razão está registrada porque contradiz o que esta seção dizia antes. O oráculo original eram os testes do próprio commit-alvo, aplicados após a sessão. Uma filtragem mecânica de 12 candidatos reais mostrou que ele não é praticável:
 
-**Critério de reserva**, quando o commit-alvo não trouxe teste: a suíte pré-existente passa **e** a edição toca o conjunto de arquivos que o commit tocou. É mais fraco, e a diferença é declarada no resultado em vez de dissolvida nele.
+| resultado | quantos |
+|---|---|
+| os testes do alvo falham na árvore pai (oráculo válido) | 6 |
+| **passam na árvore pai** — não discriminam | 6 |
+
+Metade dos testes de regressão reais **passa antes do fix**. E entre os que discriminam, os inspecionados falharam por motivos distintos: um exigia tags editoriais (`"holerite"`, `"contra check"`) que nenhum prompt transmite e nenhum agente adivinha; outro cobria apenas um módulo novo e autocontido, onde descoberta importa menos.
+
+A tensão de fundo é estrutural, e vale mais que o oráculo descartado: **as tarefas que melhor testam a hipótese de descoberta são as que atravessam muitas camadas, e atravessar camadas significa tocar superfícies editoriais.** Seus oráculos codificam escolhas arbitrárias. Já as tarefas com oráculo limpo são módulos novos autocontidos — exatamente onde localizar é fácil.
+
+Localização resolve isso porque é o que a hipótese realmente afirma. O PRD não alega que o pacote de contexto faz o modelo implementar melhor; alega que ele gasta menos exploração **antes de chegar ao lugar certo**. Correção comportamental é outro eixo, e conflacionar os dois foi o que tornou a seleção impraticável.
+
+O que se perde está declarado: o experimento não verifica que a mudança está correta. Um agente que edite o arquivo certo com conteúdo errado marca ponto. Isso é aceitável na Fase 0 e não seria numa fase de qualidade.
 
 #### A métrica
 
-**Tool calls até a primeira edição correta.** Conta toda invocação de ferramenta — leitura, busca, listagem, shell, edição — do início da sessão até a edição que satisfaz o oráculo, **incluindo as tentativas que falharam antes dela**. Tentativa falha é custo real e conta.
+**Tool calls até a primeira edição no lugar certo.** Conta toda invocação de ferramenta — leitura, busca, listagem, shell, edição — do início da sessão até a edição que satisfaz o oráculo, **incluindo edições em arquivos fora do conjunto declarado**. Editar o arquivo errado é custo real e conta.
 
-Registrados mas não decisórios: arquivos distintos lidos, tokens, tempo de parede.
+Registrados mas não decisórios: arquivos distintos lidos, cobertura do conjunto declarado ao final da sessão, tokens, tempo de parede.
 
 #### O limiar, fixado agora
 

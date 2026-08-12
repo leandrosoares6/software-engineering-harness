@@ -40,7 +40,15 @@ SUPPORTED_STEPS = {"splice.after", "splice.before"}
 # meaning of the surrounding literal is not a value this type carries; that is
 # behaviour, and belongs in a module the capability never touches.
 PARAMETER_TYPES = frozenset({"python_identifier", "text_line"})
-TEXT_LINE_MAX_CHARS = 200
+
+# Raised from 200 after a field scan of a production repository: a real service
+# declaration carried a 185-character, four-sentence `description` beside its
+# `name` and `short_name`. The original bound sat 15 characters from refusing live
+# data, and the reason given for it — that prose must be a label — was contradicted
+# by the first real case. The bound now exists only so a value cannot become a
+# document. What keeps a value safe is the single-line and character rules below,
+# never its length.
+TEXT_LINE_MAX_CHARS = 500
 _TEXT_LINE_FORBIDDEN = {
     '"': "a double quote would terminate the surrounding string literal",
     "'": "a single quote would terminate the surrounding string literal",
@@ -367,8 +375,9 @@ def _validate_text_line(name: str, value: Any) -> None:
         raise CapabilityRefusal(f"parameter {name!r} must be a non-empty text_line")
     if len(value) > TEXT_LINE_MAX_CHARS:
         raise CapabilityRefusal(
-            f"parameter {name!r} exceeds {TEXT_LINE_MAX_CHARS} characters; a text_line "
-            "is a label, not a paragraph"
+            f"parameter {name!r} is {len(value)} characters, over the "
+            f"{TEXT_LINE_MAX_CHARS} a text_line carries; content this long is a "
+            "document, and belongs in a file the capability never touches"
         )
     for char, reason in _TEXT_LINE_FORBIDDEN.items():
         if char in value:

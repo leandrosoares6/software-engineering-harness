@@ -695,7 +695,7 @@ def _with_text_line(candidate: Path, value: object) -> Path:
         ("{{ name }}", "template expression"),
         ("", "non-empty"),
         (7, "non-empty"),
-        ("x" * 201, "not a paragraph"),
+        ("x" * 501, "is a document"),
     ],
 )
 def test_text_line_refuses_values_that_could_carry_meaning(tmp_path, value, message):
@@ -704,6 +704,26 @@ def test_text_line_refuses_values_that_could_carry_meaning(tmp_path, value, mess
     gate = next(gate for gate in _validate(candidate).gates if gate.name == "fidelity")
     assert not gate.passed
     assert message in gate.detail
+
+
+def test_text_line_accepts_a_multi_sentence_description(tmp_path):
+    """The length a field scan found in production, which the old bound refused.
+
+    A real service declaration carried a 185-character, four-sentence description
+    beside its short name. The first bound was set by guessing what prose ought to
+    look like; this pins it against what prose actually looked like.
+    """
+    description = (
+        "Este servico permite consultar o extrato do documento. Voce visualiza os "
+        "registros associados ao seu cadastro. O sistema mostra o total disponivel "
+        "no periodo. Tambem informa o valor expirado."
+    )
+    assert 180 <= len(description) <= 200, len(description)
+    candidate = _with_text_line(candidate_package(tmp_path), description)
+
+    gate = next(gate for gate in _validate(candidate).gates if gate.name == "fidelity")
+    assert "text_line" not in gate.detail
+    assert "characters" not in gate.detail
 
 
 def test_text_line_accepts_ordinary_prose(tmp_path):

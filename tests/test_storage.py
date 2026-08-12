@@ -6,6 +6,7 @@ from datetime import UTC, datetime
 import pytest
 
 from seh.errors import SchemaError, StateError, StorageError
+from seh import __version__
 from seh.models import Edge, EdgeKind, IndexMetadata, Node, NodeKind
 from seh.storage import SCHEMA_VERSION, GraphStore
 
@@ -16,7 +17,7 @@ def metadata(root, fingerprint="abc") -> IndexMetadata:
         git_head=None,
         fingerprint=fingerprint,
         indexed_at=datetime.now(UTC).isoformat(),
-        indexer_version="0.1.0a2",
+        indexer_version=__version__,
         schema_version=SCHEMA_VERSION,
     )
 
@@ -24,15 +25,15 @@ def metadata(root, fingerprint="abc") -> IndexMetadata:
 def test_store_roundtrip_with_metadata_and_foreign_keys(tmp_path):
     store = GraphStore(tmp_path / "seh.db")
     nodes = [
-        Node("f1", NodeKind.FILE, "UserService.java", "src/UserService.java", qualified_name="src/UserService.java"),
-        Node("c1", NodeKind.CLASS, "UserService", "src/UserService.java", 3, "example.UserService"),
+        Node("f1", NodeKind.FILE, "users.py", "src/app/users.py", qualified_name="src/app/users.py"),
+        Node("c1", NodeKind.CLASS, "UserService", "src/app/users.py", 3, "app.users.UserService"),
     ]
     edges = [Edge("f1", "c1", EdgeKind.DECLARES)]
     store.replace_graph(nodes, edges, metadata(tmp_path))
 
     assert store.metadata().fingerprint == "abc"
-    assert len(store.search_nodes("UserService")) == 2
-    assert store.neighbors("f1")[0]["qualified_name"] == "example.UserService"
+    assert len(store.search_nodes("UserService")) == 1
+    assert store.neighbors("f1")[0]["qualified_name"] == "app.users.UserService"
     with store.connect() as connection:
         assert connection.execute("PRAGMA foreign_keys").fetchone()[0] == 1
 
@@ -40,7 +41,7 @@ def test_store_roundtrip_with_metadata_and_foreign_keys(tmp_path):
 def test_literal_wildcards_do_not_match_everything(tmp_path):
     store = GraphStore(tmp_path / "seh.db")
     store.replace_graph(
-        [Node("f1", NodeKind.FILE, "100%Real.java", "100%Real.java", qualified_name="100%Real.java")],
+        [Node("f1", NodeKind.FILE, "100%real.py", "100%real.py", qualified_name="100%real.py")],
         [],
         metadata(tmp_path),
     )
@@ -88,7 +89,7 @@ def test_corrupt_database_raises_user_facing_storage_error(tmp_path):
 
 def test_failed_replacement_preserves_last_valid_graph(tmp_path):
     store = GraphStore(tmp_path / "seh.db")
-    original = Node("f1", NodeKind.FILE, "Original.java", "Original.java", qualified_name="Original.java")
+    original = Node("f1", NodeKind.FILE, "original.py", "original.py", qualified_name="original.py")
     store.replace_graph([original], [], metadata(tmp_path, "original"))
 
     invalid_edge = Edge("missing", "also-missing", EdgeKind.CONTAINS)
@@ -96,4 +97,4 @@ def test_failed_replacement_preserves_last_valid_graph(tmp_path):
         store.replace_graph([], [invalid_edge], metadata(tmp_path, "replacement"))
 
     assert store.metadata().fingerprint == "original"
-    assert store.node("f1")["name"] == "Original.java"
+    assert store.node("f1")["name"] == "original.py"

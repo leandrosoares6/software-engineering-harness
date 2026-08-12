@@ -16,25 +16,24 @@
 > Symbol indexing and evidence compression are supporting levers, not the differentiator — that layer is
 > occupied by Serena, Aider, act101 and OHM-MCP. Cost savings are a consequence of the thesis, not the pitch.
 >
-> Both **tokens and latency** are primary metrics: replacing inference (3–8s) with AST execution (ms) is
-> measured at 8.7x latency improvement and up to 99% token savings on repeated tasks.
+> Both **tokens and latency** are primary metrics. External deterministic-replay research reports 8.7x
+> latency improvement and up to 99% token savings on repeated tasks; these figures are motivation, not SEH
+> results. SEH's own economic hypothesis remains open until M2 runs the three-arm experiment.
 >
-> SEH is self-contained (no external server required) and ships as an MCP server so it works with any
-> MCP-speaking coding agent. The Java/Tree-sitter adapter from PR #1 is frozen; indexing moved to Python
-> via the stdlib `ast` module.
+> SEH is currently a self-contained CLI with no external server requirement. MCP distribution is the M4
+> target. Python via the stdlib `ast` module is the only graph-indexing path.
 
 ## M0 — Foundation
 - [x] CLI skeleton
 - [x] Git integration
 - [x] SQLite graph store
-- [x] Java symbol prototype *(frozen — superseded by the Python adapter in M1)*
+- [x] Python symbol indexing via the standard-library AST
 - [x] graph inspection
-- [x] AST-backed Java language adapter *(frozen, out of the default indexing path)*
 - [x] graph schema versioning
 
 ## M1 — Python Context Compiler
-- [ ] **M1a (pulled into MVP Fase 1 — see PRD)**: Python adapter via stdlib `ast` (zero external dependency;
-      replaces Java/Tree-sitter as the default) + `seh inspect`/`seh neighbors` working on Python repos.
+- [x] **M1a (pulled into MVP Fase 1 — see PRD)**: Python adapter via stdlib `ast` (zero parser dependency)
+      + `seh inspect`/`seh neighbors` working on Python repos.
       This is the exploration-compression lever: it exists mainly to let the agent locate a symbol and its
       relations without grepping and reading whole files — a cost that shows up on *every* task, not just
       the error-retry loop, which is why it could not wait for the full M1.
@@ -52,19 +51,16 @@ Implementation and experiment contract: [`M2_MEASUREMENT_PROTOCOL.md`](M2_MEASUR
 - [ ] `pytest` output → structured evidence compressor
 - [ ] structured evidence model (reuses the provenance/fingerprint discipline built in PR #1)
 - [ ] measurement harness — **tokens and wall-clock latency** per task
-- [ ] baseline vs. SEH benchmark on a reproducible POC project
+- [ ] three-arm A/A′/B benchmark on a reproducible POC project: baseline agent, documented procedure, SEH
 
 ## M3 — `seh capability`: Procedural Memory *(the product)*
-- [x] **initial source-preservation spike**: hand-write `add-cli-command` and `add-node-kind`; prove AST→offset
-      plus textual splice, executable scaffolding, idempotency, and safe refusal. Findings:
-      [`PHASE0_FINDINGS.md`](PHASE0_FINDINGS.md)
-- [x] **third shape-adjacent capability**: `add-java-relation-kind` reused all four predicted primitives and
-      confirmed that nested scope addressing is a locator refinement, not a new primitive
-- [x] **complete the Phase 0 gate with required product events**: `seh capability validate` is implemented by
-      hand as one-time group setup and excluded from fidelity data; after committing it, record a new clean
-      Git baseline, implement and capture `install`, derive `add-capability-subcommand`, then generate
-      developer-approved `run` as generalization. The validator judging a candidate learned from `install`
-      is machinery judging data, not a circular dependency. Everything below is conditional on this
+- [x] **initial source-preservation spike**: proved AST→offset plus textual splice, executable scaffolding,
+      idempotency, and safe refusal. It explored a wider vocabulary against the Java adapter, which was
+      removed in the Python-only migration; the surviving lessons are recorded in
+      [`PHASE0_FINDINGS.md`](PHASE0_FINDINGS.md), the primitives it exercised are not admitted
+- [x] **Phase 0 gate closed with required product events**: `validate` was implemented by hand as one-time
+      group setup and excluded from fidelity data; `install` was captured from a clean Git baseline;
+      `add-capability-subcommand` was derived from it; and developer-approved `run` closed generalization
 - [ ] `seh.capability/v0.1` format — intent, typed parameters, applicability, preconditions, primitive steps,
       templates, fixtures, verification, provenance
 - [x] closed, versioned Phase 0 primitive vocabulary — only primitives exercised by real retained events;
@@ -89,8 +85,10 @@ Implementation and experiment contract: [`M2_MEASUREMENT_PROTOCOL.md`](M2_MEASUR
       fingerprint
 - [ ] compact catalogue projection — the model sees only intent and parameter summaries after deterministic
       applicability filtering; steps, fixtures, and templates stay outside its context
-- [ ] capabilities versioned in `.seh-capabilities/`; operation records remain local evidence in `.seh/`
-- [ ] no capability-to-capability composition in the MVP; capabilities compose only SEH primitives
+- [x] installed Phase 0 capability packages live in version-controlled `.seh-capabilities/`
+- [ ] persist immutable operation records as local evidence in `.seh/`
+- [x] Phase 0 excludes capability-to-capability composition; capabilities compose only supported SEH
+      primitives
 - [ ] dogfooding: validate and install `add-capability-subcommand` plus one candidate of a genuinely different
       shape, then instantiate both against new real cases
 - [ ] payback curve: how many instantiations before a capability pays for its authoring cost

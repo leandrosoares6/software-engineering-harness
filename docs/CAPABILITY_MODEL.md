@@ -110,31 +110,38 @@ The primitive vocabulary is closed and deliberately small. A consuming project c
 plugins or lifecycle scripts as new primitives. If two real capabilities require a missing primitive, that is
 product evidence: the primitive can be added to SEH deliberately, versioned, reviewed, and tested.
 
-The provisional vocabulary retained after the first Phase 0 spikes is:
+The admitted vocabulary is exactly what the one retained capability required:
 
 ```text
 LOCATORS (Python AST → source span)    EFFECTS (source text → patch)
 ├── python.symbol                     ├── splice.before
-├── python.statement                  ├── splice.after
-├── python.class_body                 └── splice.into_collection
-└── python.collection_literal
+└── python.statement                  └── splice.after
 
 VERIFICATION
 └── verify.command
 ```
 
-This list is a hypothesis, not a frozen API. The first two capabilities shared only `splice.after`; the
-third, shape-adjacent capability then reused all four predicted structural primitives. `python.module`,
-`python.assignment`, `python.import_block`, and `file.render` were proposed but not exercised and therefore
-are not admitted provisionally. In particular, creating a module merely to cover `file.render` would repeat
-the snapshot-multiplicity error: a real recurring procedure must demand it first. The shared algebra remains
-conditional on prospectively captured, developer-accepted change events. See
-[`PHASE0_FINDINGS.md`](PHASE0_FINDINGS.md).
+That is the whole algebra, and it matches `SUPPORTED_STEPS` in the runtime exactly. It is small because
+nothing else has been demanded by a real, prospectively captured, developer-accepted change event.
 
-The implementation under `experiments/phase0/` is frozen evidence for that hypothesis, not the runtime
-authority. `src/seh/source_edit.py` is the normative product implementation. A primitive migrates from the
-experiment only when a retained real capability requires it; the validator does not add primitives merely
-to keep the experiment and product vocabularies numerically identical.
+`python.module`, `python.assignment`, `python.class_body`, `python.collection_literal`,
+`python.import_block`, `splice.into_collection`, and `file.render` were proposed at various points and are
+**not admitted**. Some were never exercised. Others were exercised only against the Java adapter the project
+has since removed, which leaves those claims without evidence rather than with weak evidence — a documented
+primitive with no implementation and no proof is worse than an absent one.
+
+A primitive is admitted when a real recurring procedure demands it — not to round out a vocabulary, and not
+to restore a deleted experiment. Creating a module merely to cover `file.render` would repeat the
+snapshot-multiplicity error in a new form. See [`PHASE0_FINDINGS.md`](PHASE0_FINDINGS.md).
+
+`src/seh/source_edit.py` is the sole implementation and the normative authority. `experiments/phase0/`
+preserves the prospective `install` → `run` capture that closed the technical gate; it holds fixtures and
+executable checks, not a second algebra.
+
+An earlier spike explored a wider vocabulary against the Java adapter. That adapter was removed when the
+project became Python-only, and its evidence went with it. The lessons it produced are retained above and in
+`PHASE0_FINDINGS.md` — style derives from siblings, capture cannot be reconstructed by subtraction — but the
+primitives it exercised are not, because a claim whose proof was deleted is a claim without proof.
 
 The first retained event also defines a deliberately narrow command seam. New `capability` subcommands add
 two local-import adapters in `capability_cli.py`: `cmd_<name>` delegates to
@@ -145,10 +152,11 @@ only by a validated Python identifier instead of accepting prose, argument lists
 parameters. `cmd_validate` remains inline until after the `install` fixture is captured so a retrospective
 refactor cannot contaminate the first real event.
 
-Each structural primitive supports one declared syntactic form and refuses the others. For example,
-`splice.into_collection` for a list literal is not a generic “register this value somewhere” operation. A
-set literal, dictionary, `.extend()` call, decorator registry, and annotation-based registry are different
-forms that require different support or explicit refusal.
+Each structural primitive supports one declared syntactic form and refuses the others. `python.statement`
+locates the top-level `return` of a named function; it does not locate "wherever this value should go". If a
+future capability needs to register a value in a collection, a list literal, set literal, dictionary,
+`.extend()` call, decorator registry, and annotation-based registry are different forms, each requiring
+explicit support or explicit refusal — never adaptation.
 
 ## Source-preserving Python edits
 
@@ -364,20 +372,6 @@ installed catalogue
 
 ## Phase 0 output and current status
 
-The spike hand-authored three capabilities. The third, `add-java-relation-kind`, reused all four predicted
-primitives and showed that the initial overlap of one was a sample-shape artefact. It also exposed that none
-of the three candidates represented a genuinely repeated change event: similar structures had mostly been
-created together in bootstrap commits. A fidelity fixture reconstructed by subtraction therefore failed
-against an accepted ordering that never existed in the supposed `before/` state.
-
-An in-memory prospective rehearsal captured the real current bytes and reproduced an independently authored
-`report` scaffold byte-for-byte; the same capability also produced a correct proposed `doctor` scaffold over
-the evolved state. The reference patch used direct literal insertions at explicit text boundaries and did not
-call the capability's AST locators, splice effects, or template constants. This validates the mechanics, not
-the product gate: the second case has not yet been approved or edited by the developer and neither scaffold
-is a retained project change. It was rehearsal evidence only; the later `install` → `run` capture below is
-the retained product gate.
-
 Phase 0's technical gate is closed. Its retained sequence is intentionally asymmetric:
 
 1. implement `seh capability validate` manually, creating the command group; this one-time setup is not a
@@ -399,15 +393,13 @@ that evaluates a candidate, while the candidate is project data describing a rep
 
 The phase delivers:
 
-1. a provisional closed primitive vocabulary supported by shape-adjacent capabilities;
-2. capability packages with prospectively captured pre-implementation fixtures and structural expected
+1. a provisional closed primitive vocabulary supported by one retained real capability;
+2. a capability package with prospectively captured pre-implementation fixtures and structural expected
    patches;
-3. source-preserving AST-location plus textual-splice prototypes;
-4. all four gates passing for every retained capability;
-5. an explicit record of primitives that were shared, split, added, or rejected.
+3. source-preserving AST-location plus textual splice in the product runtime;
+4. all four gates passing for the retained capability.
 
-The full record is [`PHASE0_FINDINGS.md`](PHASE0_FINDINGS.md): it preserves both the falsified retrospective
-spike and the prospectively captured event that closed the technical milestone.
+The full record is [`PHASE0_FINDINGS.md`](PHASE0_FINDINGS.md).
 
 The Phase 0 production CLI is intentionally restricted to `validate`, `install`, and `run`. A final schema,
 MCP surface, arbitrary scripts, capability composition, and extension points remain outside this phase. Its

@@ -22,12 +22,12 @@ O custo aparece em dois eixos, não um: **tokens** (o modelo lê, reescreve e re
 
 ## Proposed Solution
 
-O SEH é o **live template do IntelliJ, para agentes, medido**: o agente externo escreve uma capacidade de engenharia deste projeto **uma vez**; o SEH a valida, instala e instancia como operações **determinísticas** (~0 token, milissegundos). O SEH nunca chama modelo e envolve o agente de código já em uso (Claude Code, Codex, Kimi) sem substituí-lo.
+O SEH é o **live template do IntelliJ, para agentes, mensurável**: o agente externo escreve uma capacidade de engenharia deste projeto **uma vez**; o SEH a valida, instala e instancia como operações **determinísticas** (~0 token no caminho da operação, milissegundos). O SEH nunca chama modelo e envolve o agente de código já em uso (Claude Code, Codex, Kimi) sem substituí-lo. Os números próprios de token, latência e payback ainda dependem do experimento M2.
 
 A solução tem **três alavancas**, em ordem de valor:
 
 1. **Capacidades do projeto (`seh capability`)** — *alavanca principal.* Uma capacidade é um procedimento composto e parametrizado, versionado em `.seh-capabilities/`; cada execução instancia uma operação. Exemplo real: adicionar um subcomando exige um bloco de subparser em `cli.py`, um handler e um teste. Capturado uma vez, vira `seh capability run add-cli-command --name=report`. É o que scaffolders não fazem (não editam arquivo existente) e o que refactorers universais não fazem (não compõem o procedimento específico do projeto).
-2. **Compressão de exploração** — antes de editar, o agente precisa entender o código. Sem SEH, isso é feito com várias chamadas de Read/Grep/Glob, lendo arquivos inteiros para achar uma função ou seus usos. O SEH expõe `seh inspect <symbol>` e `seh neighbors <symbol>` (já existentes no CLI desde o M0, hoje presos ao adaptador Java) sobre o índice Python (`ast`): localização exata e relações estruturais em poucas linhas. Age em **toda tarefa**, não só quando um teste falha. Também é o substrato técnico da alavanca 1 — sem AST não há inserção estrutural.
+2. **Compressão de exploração** — antes de editar, o agente precisa entender o código. Sem SEH, isso é feito com várias chamadas de Read/Grep/Glob, lendo arquivos inteiros para achar uma função ou seus usos. O SEH expõe `seh inspect <symbol>` e `seh neighbors <symbol>` sobre o índice Python (`ast`): localização exata e relações estruturais em poucas linhas. Age em **toda tarefa**, não só quando um teste falha. Também é o substrato técnico da alavanca 1 — sem AST não há inserção estrutural.
 3. **Compressão de evidência de runtime** — saída de teste/build/lint comprimida em evidência estruturada, ativa no ciclo de erro→reteste. É o que mantém o agente ciente do que aconteceu sem despejar log bruto no contexto.
 
 O ciclo de vida de uma capacidade — **propor → confirmar → validar → instalar → instanciar → verificar → medir** — é o que amarra as três: cada operação executa a alavanca 1, dispensa a 2 (a estrutura já está codificada na capacidade) e produz a 3 como resultado verificado.
@@ -108,11 +108,11 @@ Nota metodológica crítica: o **onboarding do Serena é executado pelo LLM e co
 - [x] ~~O autor já rodou o Serena?~~ Respondido: não, o projeto nasceu como exercício de engenharia de software, sem conhecimento prévio do Serena.
 - [x] ~~Tensão de escopo: manter indexador próprio por valor de aprendizado vs. consumir Serena?~~ Resolvida: o autor não quer dependência de instalar Serena; o SEH será self-contained. A capacidade simbólica própria deixa de ser opcional/fallback e passa a ser parte do produto — só que mínima (Python `ast`), não uma tentativa de igualar Serena/Aider em profundidade.
 - [x] ~~O SEH entrega valor como servidor MCP ou wrapper de CLI?~~ Resolvida: MCP, para funcionar em qualquer agent code sem acoplamento — é a exigência explícita do autor.
-- [x] ~~O que fazer com o indexador Java do PR #1?~~ Resolvida: paradigma muda de Java para Python. O indexador Java do PR #1 fica congelado como referência de arquitetura (proveniência, fingerprint, schema versionado); a implementação segue em Python com `ast`, não Tree-sitter.
+- [x] ~~Qual linguagem sustenta o primeiro indexador?~~ Resolvida: Python via `ast` da stdlib, sem superfície multi-linguagem no MVP.
 - [ ] Natureza do projeto: OSS público, portfólio, interno ou comercial? *Assumption atual: portfólio/exercício técnico com distribuição OSS*; `license = "Apache-2.0"` no PR #1 indica intenção de publicar, mas a motivação declarada é aprendizado, não adoção de terceiros.
 - [ ] Qual o tamanho e a forma do projeto POC? Precisa ser grande o bastante para o custo de leitura aparecer, pequeno o bastante para iterar.
 - [ ] Como isolar variância do LLM entre sessões? Mesma tarefa gera consumo diferente por não-determinismo; quantas repetições para significância?
-- [ ] O plano técnico do Context Compiler (mantido fora do versionamento) foi escrito para Java/Tree-sitter e precisa ser reescrito para Python/`ast` antes de virar trabalho executável — e reduzido à fatia mínima, já que o M1b saiu do caminho crítico.
+- [x] O plano do Context Compiler foi reduzido à fatia Python mínima; o Engineering IR completo permanece fora do caminho crítico.
 - [ ] Qual o tipo de âncora AST do MVP para inserção em arquivo existente? Precisa ser um caso bem definido (ex.: bloco de subparser em `cli.py`), não um motor genérico.
 
 ---
@@ -150,11 +150,11 @@ Quando **preciso fazer no meu projeto algo que já fiz antes do mesmo jeito**, e
 | Must | **Medidor de tokens e latência / harness de benchmark** | Sem medir, nada é falsificável. É o instrumento que valida ou mata o projeto |
 | Must | **Adaptador Python (`ast`) + `seh inspect`/`seh neighbors`** | Alavanca 2 e substrato técnico da alavanca 1 — sem AST não há inserção estrutural |
 | Must | **Command runner + compressão de saída → evidência** | Alavanca 3. Verifica o resultado do replay e mantém o agente ciente sem log bruto |
-| Must | **Projeto POC + protocolo A/B** | O experimento; sem ele o número não significa nada |
+| Must | **Projeto POC + protocolo A/A′/B** | Separa o efeito da documentação do valor adicional do replay determinístico |
 | Must | **Self-contained, zero dependência externa** | Exigência explícita do autor — nada de instalar servidor externo como pré-requisito |
 | Should | **Exposição via MCP** | Funciona em qualquer agent code (Claude Code, Codex, Kimi) sem acoplamento |
 | Should | Capacidades versionadas em `.seh-capabilities/` | Compartilháveis, revisáveis em PR. Operações e evidência permanecem no estado local `.seh/` |
-| Should | Aproveitar proveniência/frescor do PR #1 | Arquitetura reaproveitável; implementação muda de Tree-sitter/Java para `ast`/Python |
+| Should | Aproveitar proveniência/frescor da fundação do grafo | Fingerprint, schema versionado e recusa de índice obsoleto são reutilizáveis em evidência |
 | Could | Derivar capacidade a partir de commit anterior | Passo natural seguinte; fuzzy demais para o MVP |
 | Could | Engineering IR completo / Context Package com budget (M1 pleno) | Fica para depois do veredito |
 | Could | Benchmark contra Serena | Referência de mercado opcional, não bloqueia a validação |
@@ -171,7 +171,7 @@ O mínimo para validar a hipótese, em ordem de dependência:
 3. Um **adaptador Python (`ast`)** + `seh inspect`/`seh neighbors` — exploração e localização estrutural; AST nunca reescreve fonte.
 4. **`seh capability validate` / `install` / `run`** com capacidades reais instaladas, fixtures pré-implementação e splice textual source-preserving.
 5. Um **runner + compressor** `pytest` → evidência, para verificar o replay.
-6. O **experimento baseline vs. SEH**, com capacidades instanciadas N vezes para medir a curva de payback.
+6. O **experimento A/A′/B** — agente baseline, agente com procedimento documentado e agente assistido pelo SEH — com capacidades instanciadas N vezes para medir a curva de payback diferencial.
 
 O ponto de falsificação mudou duas vezes. Não é mais "compressão gera delta?", nem apenas "em quantas repetições se paga?" — é primeiro **"um candidato passa nos quatro gates?"** (hipótese A, técnica, confirmada na Fase 0 pelo evento `install` → `run`) e só depois a curva de payback (hipótese B, econômica). O protocolo desta segunda etapa está em [`docs/M2_MEASUREMENT_PROTOCOL.md`](../../../docs/M2_MEASUREMENT_PROTOCOL.md). Ver a bifurcação de resultado em *Key Hypothesis*.
 
@@ -238,11 +238,11 @@ O Caminho B alimenta o Caminho A: cada padrão aprovado vira capacidade; cada us
 **Architecture Notes**
 
 - **Self-contained por design.** Nenhuma dependência de instalar um servidor MCP externo (Serena) como pré-requisito. O SEH é a única coisa que o usuário instala.
-- **Indexação simbólica própria, em Python, via `ast` da stdlib.** Substitui o paradigma Tree-sitter/Java do PR #1. Escopo deliberadamente mínimo — o bastante para a evidência referenciar `arquivo:linha:função`, não uma tentativa de igualar LSP.
+- **Indexação simbólica própria, em Python, via `ast` da stdlib.** Escopo deliberadamente mínimo — o bastante para a evidência referenciar `arquivo:linha:função`, não uma tentativa de igualar LSP.
 - **AST localiza; texto escreve.** `ast.unparse()` é proibido no caminho de mutação porque destrói comentários e reformata código mesmo sem mudança. O localizador mede estilo entre irmãos do mesmo pai e entrega span + separador; o splice apenas aplica o fragmento e preserva os demais bytes. Agrupamentos humanos ausentes da gramática são declarados pela capacidade.
 - **Álgebra fechada.** Capacidades compõem somente primitivas implementadas e versionadas pelo SEH. Uma primitiva ausente é sinal de produto, não autorização para plugin ou hook arbitrário.
 - **Seleção barata.** O modelo recebe apenas projeção compacta de intenção e parâmetros das capacidades aplicáveis; templates, fixtures e passos ficam fora do contexto.
-- **Reaproveitar a disciplina de evidência do PR #1.** Fingerprint, schema versionado e recusa de dado obsoleto ("evidência confiável ou erro explícito") são exatamente a semântica que o `seh-evidence` precisa — a arquitetura sobrevive, a implementação (Tree-sitter Java) é substituída por `ast` Python.
+- **Reaproveitar a disciplina de evidência da fundação.** Fingerprint, schema versionado e recusa de dado obsoleto ("evidência confiável ou erro explícito") são exatamente a semântica que o `seh-evidence` precisa.
 - **Execução fora do contexto do modelo.** O runner roda no processo do SEH; o modelo só vê o resultado normalizado.
 - **Exposto via MCP.** É o mecanismo concreto de "funciona em qualquer agent code" sem reescrever integração por cliente.
 - **Um ecossistema primeiro (Python).** Multi-linguagem é escala, não validação.
@@ -253,7 +253,8 @@ O Caminho B alimenta o Caminho A: cada padrão aprovado vira capacidade; cada us
 |---|---|---|
 | **Custo de capturar uma capacidade não se paga para o ICP original** | Alta | Métrica de payback (≤5 operações) na Fase 6; se a hipótese técnica passar e a econômica falhar, reposicionar o ICP ou encerrar a promessa econômica |
 | **Inserção estrutural preserva semântica, mas destrói source fidelity** | Alta | AST apenas localiza; splice textual escreve e preserva bytes fora do fragmento; `ast.unparse()` excluído |
-| **A amostra produz uma “álgebra” fragmentada ou hard-coded** | Alta | A terceira capacidade shape-adjacent reutilizou as quatro primitivas previstas; a Fase 0 ainda exige eventos prospectivos aceitos para evitar validar templates artificiais |
+| **A amostra produz uma “álgebra” fragmentada ou hard-coded** | **Alta — não mitigada** | O evento prospectivo `install` → `run` fechou os quatro gates, mas com **uma** capacidade e **duas** primitivas. A evidência de reuso entre formas diferentes vinha de capacidades construídas sobre o adaptador Java, removido na migração Python-only; ela não sobreviveu. Só uma segunda capacidade de forma genuinamente diferente, em Python, restabelece o teste |
+| **Selecionar capacidade pelo snapshot em vez da direção do projeto** | Média — materializada uma vez | Duas das três capacidades da Fase 0 foram escolhidas por terem estrutura repetida no `java_adapter.py`, já marcado `frozen` no roadmap. O trabalho foi descartado na migração. É a versão vizinha do F8: estrutura num snapshot não é estrutura que se pretende manter. Seleção passa a exigir checagem contra o roadmap, não só contra o código presente |
 | **MVP com uma alavanca só (evidência) não move o número o bastante** | Alta | Adaptador Python e capacidades entram como Must; evidência é uma alavanca de suporte |
 | Capacidade instalada fica obsoleta quando o padrão do projeto muda | Média | Precondições locais + verificação após a operação; estrutura incompatível falha antes de escrever |
 | Seleção exige ler o catálogo inteiro e recria custo de contexto | Média | Filtro determinístico de aplicabilidade + projeção compacta somente de `intent` e parâmetros |
@@ -270,22 +271,22 @@ O Caminho B alimenta o Caminho A: cada padrão aprovado vira capacidade; cada us
 
 | # | Fase | Descrição | Status | Parallel | Depends | PRP Plan |
 |---|---|---|---|---|---|---|
-| 0 | **Spike da álgebra de capacidades** | Três capacidades provaram preservação, idempotência, recusa e reutilização; faltam `install`/`run` como eventos reais sobre baseline Git limpo. **Sem schema ou CLI finais** | in progress | - | - | - |
+| 0 | **Spike da álgebra de capacidades** | `install` → `run` fechou os quatro gates sobre captura prospectiva real; schema público e automação de captura permanecem para a Fase 3 | complete | - | - | - |
 | 1 | Adaptador Python + consulta de símbolo | `python_adapter.py` + `seh inspect`/`seh neighbors` — substrato AST para âncoras estruturais | pending | with 2 | 0 | - |
-| 2 | Runner + compressor de evidência | `pytest` executado fora do contexto → evidência estruturada | pending | with 1 | 0 | - |
+| 2 | Fundação, runner e compressor de evidência | schemas/storage versionados; depois `pytest` fora do contexto → evidência estruturada | pending | with 1 | 0 | - |
 | 3 | **`seh capability` — formato e runtime** | `seh.capability/v0.1`, primitivas fechadas, catálogo compacto, quatro gates e operações imutáveis — **o produto** | pending | - | 1, 2 | - |
 | 4 | Dogfooding no próprio SEH | Instalar `add-capability-subcommand` e uma capacidade de outra forma; usá-las em casos reais | pending | - | 3 | - |
-| 5 | POC, instrumentação e baseline | Projeto POC com repetição real + medidor de tokens e latência + braço A | pending | with 3, 4 | 0 | - |
-| 6 | Braço SEH, curva de payback e veredito | Medir tokens, latência e em quantas operações cada capacidade se paga | pending | - | 4, 5 | - |
+| 5 | POC, instrumentação e desenho experimental | Projeto POC com repetição real + medidor + braços A/A′/B, `R = 3` | pending | with 3, 4 | 0 | - |
+| 6 | Piloto, curva de payback e veredito | Medir `A → A′`, `A′ → B`, `A → B` e em quantas operações cada tratamento se paga | pending | - | 4, 5 | - |
 | 7 | Exposição via MCP | Empacotar como servidor MCP self-contained | pending | - | 6 | - |
 | 8 | Benchmark opcional (Serena / OHM-MCP) | Referência de mercado; não bloqueia release | pending | with 1–7 | - | - |
 
 ### Phase Details
 
-**Fase 0: Spike da álgebra de capacidades** *(o portão — nada começa antes disso)*
+**Fase 0: Spike da álgebra de capacidades** *(portão técnico fechado)*
 - **Objetivo**: descobrir se existe uma linguagem determinística pequena e compartilhável para procedimentos reais, antes de investir em CLI, schema final, medição ou empacotamento.
-- **Estado atual**: `add-cli-command`, `add-node-kind` e `add-java-relation-kind` provaram source preservation, scaffolding executável, idempotência, recusa segura e reutilização das quatro primitivas previstas. `seh capability validate` agora existe como corte vertical manual: carrega o perfil restrito `seh.capability.phase0/v0.1`, executa os quatro gates e mantém toda mutação em memória/fixture temporária. Como criação única do grupo, não é dado de fidelidade. Ver `docs/PHASE0_FINDINGS.md`.
-- **Escopo restante**: após commitar `validate`, registrar novo baseline Git limpo; implementar `install`, aceitá-lo e capturar seu subconjunto estrutural; derivar `add-capability-subcommand`; gerar `run` como segundo evento aprovado/editado pelo dev. `validate` é a máquina que julga a capacidade derivada de `install`, não dado de treinamento, portanto não há circularidade.
+- **Estado atual**: concluído. `validate` foi implementado à mão como evento de criação do grupo; `install` foi capturado a partir de baseline Git limpo; `add-capability-subcommand` foi derivada do subconjunto estrutural aceito; e seu replay gerou o wiring de `run`, proposto e aprovado antes da implementação comportamental. O perfil restrito `seh.capability.phase0/v0.1` passa fidelidade, generalização, idempotência e recusa segura. Ver `docs/PHASE0_FINDINGS.md`.
+- **Limite da prova**: uma capacidade prospectiva fechou o mecanismo. Isso não prova cobertura ampla da álgebra, schema público, captura automatizada nem payback econômico; esses itens pertencem às fases seguintes.
 - **Quatro gates por capacidade**: fidelidade estrutural; generalização; idempotência; recusa segura com zero escrita parcial.
 - **Sinal de sucesso**: as capacidades retidas passam os gates; bytes fora dos fragmentos permanecem idênticos; e emerge um vocabulário pequeno com primitivas realmente compartilhadas.
 - **Sinal de fracasso**: primitivas específicas para cada template, perda de comentários/formatação, excesso de casos especiais, ou incapacidade de recusar estrutura incompatível.
@@ -297,9 +298,9 @@ O Caminho B alimenta o Caminho A: cada padrão aprovado vira capacidade; cada us
 - **Escopo**: `python_adapter.py` via `ast` da stdlib — fatia mínima do Context Compiler: só parse, qualified name e spans, sem Engineering IR e sem budget; plugar no indexador existente; `seh inspect`/`seh neighbors`.
 - **Sinal de sucesso**: localizar símbolo e relações consome visivelmente menos bytes que grep + leitura de arquivo; as âncoras improvisadas na Fase 0 passam a ser expressas via AST.
 
-**Fase 2: Runner + compressor de evidência**
+**Fase 2: Fundação, runner + compressor de evidência**
 - **Objetivo**: executar sem gastar contexto e destilar o resultado.
-- **Escopo**: descoberta/execução de teste, captura de stdout/stderr/exit code, timeout; parser `pytest` → falhas com `arquivo:linha`, mensagem e diff de assertion; formato versionado; evidência expansível sob demanda.
+- **Escopo**: primeiro os contratos `seh.operation-evidence/v1` e `seh.benchmark/v1`, JSON canônico e storage local atômico; depois descoberta/execução de teste, captura de stdout/stderr/exit code, timeout e parser `pytest` → falhas com `arquivo:linha`, mensagem e diff de assertion. Ver `docs/M2_MEASUREMENT_PROTOCOL.md`.
 - **Sinal de sucesso**: ≥10x de compressão numa suíte com falhas, sem perda de informação acionável.
 
 **Fase 3: `seh capability` — formato e runtime** *(o produto)*
@@ -312,14 +313,14 @@ O Caminho B alimenta o Caminho A: cada padrão aprovado vira capacidade; cada us
 - **Escopo**: instalar `add-capability-subcommand` e uma segunda capacidade de forma diferente, então instanciá-las em novos casos necessários ao SEH.
 - **Sinal de sucesso**: dois casos reais nascem de `seh capability run`, com testes verdes e sem edição manual do procedimento mecânico.
 
-**Fase 5: POC, instrumentação e baseline**
+**Fase 5: POC, instrumentação e desenho experimental**
 - **Objetivo**: ter um número inicial confiável nos dois eixos.
-- **Escopo**: POC em Python com estrutura real **e pelo menos um padrão genuinamente repetitivo**; lista fixa de tarefas; captura de tokens (input/output/cache) **e tempo de parede** por tarefa; protocolo de repetição documentado.
+- **Escopo**: POC em Python com estrutura real **e pelo menos um padrão genuinamente repetitivo**; lista fixa de tarefas; braços A/A′/B com `R = 3`; captura de tokens (input/output/cache) **e tempo de parede** por tarefa; protocolo e manifesto pré-registrados.
 - **Sinal de sucesso**: mesma tarefa rodada N vezes produz consumo e latência dentro de faixas de dispersão conhecidas.
 
-**Fase 6: Braço SEH, curva de payback e veredito**
+**Fase 6: Piloto, curva de payback e veredito**
 - **Objetivo**: quantificar a economia, já com a viabilidade estabelecida na Fase 0.
-- **Escopo**: rodar A (baseline) vs. SEH; reportar tokens, latência, dispersão, conclusão de tarefas, compressão e **em quantas operações uma capacidade se paga**.
+- **Escopo**: rodar A (baseline), A′ (procedimento documentado) e B (SEH); o veredito causal principal é `A′ → B`, enquanto os três pares são publicados. Reportar tokens, latência, dispersão, conclusão, catálogo instalado e **em quantas operações cada tratamento se paga**.
 - **Sinal de sucesso**: números defensáveis em qualquer direção. Payback alto demais não mata a tese de memória procedural — mas redefine para quem o produto vale a pena, e isso precisa estar escrito.
 
 **Fase 7: Exposição via MCP**
@@ -334,9 +335,9 @@ O Caminho B alimenta o Caminho A: cada padrão aprovado vira capacidade; cada us
 
 ### Parallelism Notes
 
-**A Fase 0 é o portão real e bloqueia tudo.** O primeiro spike provou que splice source-preserving funciona,
-mas o histórico não forneceu eventos recorrentes nem fixtures reais para os gates 1–2. `install` precisa ser
-capturado de um baseline Git limpo e `run` precisa ser aprovado como segundo evento antes de liberar a fase.
+**A Fase 0 era o portão real e está fechada.** O primeiro spike retrospectivo não tinha eventos recorrentes
+nem fixtures reais para os gates 1–2; a cadeia prospectiva `install` → `run` resolveu essa lacuna sem ampliar
+o vocabulário apenas para obter cobertura. As fases dependentes estão liberadas.
 
 Depois dela, 1 e 2 são paralelizáveis (adaptador e runner tocam superfícies distintas). A **Fase 3 depende das duas**: precisa do AST da 1 para inserir estruturalmente e da verificação da 2 para validar cada replay. A Fase 5 (POC e baseline) só depende da Fase 0 e pode correr em paralelo com 3 e 4 — construir o experimento não depende do produto estar pronto. A Fase 6 exige 4 e 5. A Fase 8 é pesquisa independente e roda a qualquer momento.
 
@@ -373,14 +374,14 @@ Depois dela, 1 e 2 são paralelizáveis (adaptador e runner tocam superfícies d
 | **Latência como métrica primária** | Sim, ao lado de tokens | Só token; latência como secundária | Levantada pelo autor e ausente do documento até aqui. Substituir inferência (3–8s) por execução (ms) pode ser o ganho mais perceptível no uso diário |
 | Camada de diferenciação | Capacidades + operações determinísticas + evidência + medição | Grafo próprio de repositório em profundidade de IDE | Grafo profundo é commodity (Serena MIT, 40+ linguagens; Aider PageRank) |
 | Dependência de produto | Self-contained, zero servidor externo | Consumir Serena/LSP como adaptador obrigatório | Exigência explícita do autor: não quer instalar Serena para o SEH funcionar |
-| Indexação simbólica | Python `ast` da stdlib, escopo mínimo | Tree-sitter multi-linguagem; nenhum indexador próprio | Zero dependência externa; suficiente para a evidência referenciar símbolos; não compete em profundidade |
+| Indexação simbólica | Python `ast` da stdlib, escopo mínimo | Parser multi-linguagem; nenhum indexador próprio | Zero dependência de parser; suficiente para a evidência referenciar símbolos; não compete em profundidade |
 | Modo de entrega | Servidor MCP | Wrapper de CLI que orquestra o agente | "Funciona em qualquer agent code" exige o protocolo que os agentes já falam |
 | Usuário primário | Dev solo que paga os próprios tokens | Time de plataforma; tech lead | Escolha do autor; alinha o produto a setup rápido e feedback direto |
 | Ordem de validação | Viabilidade técnica antes da infraestrutura; economia antes do release | Construir o produto inteiro antes de validar | Fase 0 precisa fechar os quatro gates artesanalmente; Fases 5–6 medem a economia antes de investir em distribuição |
 | Papel do Serena | Benchmark de pesquisa opcional | Dependência de produto (versão anterior desta decisão) | Revertido nesta sessão — autor não quer instalação externa obrigatória |
-| Linguagem do runtime v1 | Python | Java (seguindo o indexador atual) | O POC e o SEH são Python; autor concordou em migrar o paradigma |
-| PR #1 (indexador AST Java) | Congelar como referência de arquitetura | Reverter; estender em Java | Disciplina de proveniência/fingerprint é reaproveitável; implementação Tree-sitter/Java é substituída por `ast`/Python |
-| Plano técnico do Context Compiler | Mantido fora do versionamento; precisa ser reescrito para Python/`ast` | Executar como está (Java); versionar no repo | Escrito antes da decisão de migrar para Python. Desrastreado por decisão do autor — é material de trabalho, não documentação pública do projeto |
+| Linguagem do runtime v1 | Python | Suporte multi-linguagem imediato | O POC e o SEH são Python; uma superfície mais ampla desviaria da hipótese central |
+| Fundação do grafo | Preservar proveniência, fingerprint e schema versionado | Reescrever storage junto com o parser | A disciplina de evidência é independente da linguagem e já está testada |
+| Plano técnico do Context Compiler | Fatia Python mínima no MVP | Executar o plano completo; versionar material de trabalho | O Engineering IR completo saiu do caminho crítico; `inspect` e `neighbors` bastam para medir exploração |
 | Escopo da alavanca de exploração no MVP | Fatia mínima do M1 (adaptador Python + `seh inspect`/`seh neighbors`) entra na Fase 1, não depois do veredito | (a) só evidência de runtime no MVP, exploração fica para M1 pleno depois; (b) M1 pleno (Engineering IR + budget) já no MVP | Rejeitada a opção (a) nesta sessão: leitura de exploração acontece em toda tarefa, não só em retry — cobrir só evidência deixa a maior fatia do custo intocada e o número da hipótese fica artificialmente pequeno. Rejeitada (b): `inspect`/`neighbors` já existem no CLI (M0), custam muito menos que o Engineering IR completo, e bastam para a Fase 1 |
 
 ---
@@ -406,11 +407,12 @@ A lacuna que sustenta o SEH é a interseção das duas últimas linhas: **captur
 
 **Technical Context**
 
-O repositório está em `0.1.0a2` e o PR #1 já foi incorporado à `main`. Ele substituiu regex por Tree-sitter, introduziu identidades qualificadas, schema SQLite v2, proveniência, fingerprint e detecção de índice obsoleto. A suíte atual de 27 testes foi executada e passou durante esta revisão documental.
+O repositório está em `0.1.0a3`. A fundação introduziu identidades qualificadas, schema SQLite v2, proveniência, fingerprint e detecção de índice obsoleto. O indexador usa Python `ast` como único caminho. A contagem de testes deve ser lida a partir da validação do commit atual, não congelada como contrato do produto.
 
-O ativo reaproveitável do PR para o novo posicionamento **não é o parser Java** — é a disciplina de proveniência e frescor: evidência confiável ou erro explícito, nunca dado obsoleto silencioso. Essa é a semântica que o `seh-evidence` precisa.
+O ativo reaproveitável da fundação para o novo posicionamento é a disciplina de proveniência e frescor: evidência confiável ou erro explícito, nunca dado obsoleto silencioso. Essa é a semântica que o `seh-evidence` precisa.
 
 ---
 
 *Generated: 2026-08-10*
-*Status: DRAFT — needs validation*
+*Last aligned with implementation: 2026-08-12*
+*Status: ACTIVE PRODUCT SPEC — Phase 0 gate closed; M2 implementation pending*

@@ -10,11 +10,8 @@ class NodeKind(StrEnum):
     PACKAGE = "package"
     FILE = "file"
     CLASS = "class"
-    INTERFACE = "interface"
-    ENUM = "enum"
-    RECORD = "record"
+    FUNCTION = "function"
     METHOD = "method"
-    CONSTRUCTOR = "constructor"
     TEST = "test"
 
 
@@ -23,7 +20,6 @@ class EdgeKind(StrEnum):
     IMPORTS = "imports"
     DECLARES = "declares"
     EXTENDS = "extends"
-    IMPLEMENTS = "implements"
     CALLS = "calls"
     TESTS = "tests"
 

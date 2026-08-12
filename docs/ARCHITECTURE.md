@@ -8,20 +8,23 @@ Before AI agents, IDEs already automated much of this deterministically: Intelli
 "Generate →", refactorings that composed whole classes for a single purpose. Agents redo that same work
 probabilistically — slower, costlier, and error-prone. SEH's core idea is to give that determinism back:
 **have the external agent author a project-specific capability once, validate it deterministically, and
-instantiate it forever with no inference in the execution path (~0 tokens, milliseconds).** It is the
-IntelliJ live template, for agents, measured.
+instantiate it forever with no inference in the execution path (~0 tokens, milliseconds).** It is designed
+to become the IntelliJ live template for agents, with its value measured rather than assumed.
 
-Cost is tracked on **two axes, not one**: tokens *and* latency. Replacing an inference round-trip (3–8s)
-with an AST operation (ms) is measured at 8.7x latency improvement and up to 99% token savings on repeated
-tasks — latency is often the more perceptible win day to day.
+Cost is tracked on **two axes, not one**: tokens *and* latency. External deterministic-replay research reports
+8.7x latency improvement and up to 99% token savings on repeated tasks. Those numbers are prior evidence for
+the mechanism, not measurements of SEH. SEH's own token, latency, and payback results remain open until the
+M2 protocol is executed.
 
-SEH is **self-contained**: it does not require an externally installed server to operate, and it ships as
-an MCP server so it works unmodified across MCP-speaking coding agents (Claude Code, Codex, Kimi CLI, and
-others). The differentiator is *not* repository indexing (solved by Serena and Aider) nor universal
-refactoring (solved by act101, OHM-MCP, Code Scalpel) — those are consumed or kept deliberately minimal.
-It is the **composite, project-specific capability**: one that both creates new files and inserts
-structurally into existing ones, which template scaffolders (cookiecutter, plop, hygen) cannot do. Full
-rationale in `.claude/PRPs/prds/seh-runtime-evidencia-medicao.prd.md`. The developer-facing learning loop is
+SEH is **self-contained**: the current CLI does not require an externally installed server. M4 will package
+that runtime as an MCP server so it works unmodified across MCP-speaking coding agents (Claude Code, Codex,
+Kimi CLI, and others). The target differentiator is *not* repository indexing (solved by Serena and Aider)
+nor universal refactoring (solved by act101, OHM-MCP, Code Scalpel) — those are consumed or kept deliberately
+minimal.
+It is the **composite, project-specific capability**: eventually one that both creates new files and inserts
+structurally into existing ones, which template scaffolders (cookiecutter, plop, hygen) cannot do. Phase 0
+has proved insertion into existing files; file creation remains deliberately outside the admitted algebra.
+Full rationale in `.claude/PRPs/prds/seh-runtime-evidencia-medicao.prd.md`. The developer-facing learning loop is
 illustrated in [`PRODUCT_SCENARIO.md`](PRODUCT_SCENARIO.md); the unit of learning and its deterministic
 language are defined in [`CAPABILITY_MODEL.md`](CAPABILITY_MODEL.md).
 
@@ -29,9 +32,8 @@ language are defined in [`CAPABILITY_MODEL.md`](CAPABILITY_MODEL.md).
 
 ### seh-graph
 Builds and stores a repository graph containing code artifacts and relationships.
-The default implementation discovers the canonical Git root, parses tracked Python
-sources with the stdlib `ast` module (zero external dependency), and atomically
-stores a versioned graph in SQLite. Symbol resolution never guesses: ambiguous
+The implementation discovers the canonical Git root, parses tracked Python sources with the standard-library
+`ast` module, and atomically stores a versioned graph in SQLite. Symbol resolution never guesses: ambiguous
 name matches (e.g. two symbols reachable through different import paths) are
 reported as `ambiguous`, never silently picked.
 
@@ -42,20 +44,21 @@ and schema version. Read operations reject stale or incompatible evidence.
 This layer is deliberately minimal — enough for evidence to reference
 `file:line:symbol` and for capabilities to anchor structural insertions,
 not an attempt to match the indexing depth or language coverage of Serena or
-Aider. The Java/Tree-sitter adapter built in PR #1 is frozen as an architectural
-reference (it originated the provenance/fingerprint discipline described above)
-but is out of the default indexing path.
+Aider. Python is the only language path: the project deliberately avoids a multi-language parser surface
+while the product hypothesis is still being measured.
 
 ### seh-capabilities *(the product)*
 The project's versioned procedural memory: stores and instantiates composite, project-specific engineering
 capabilities.
 
 The model has three levels: a **primitive** is a project-agnostic deterministic instruction implemented by
-SEH; a **capability** (`seh.capability/v0.1`) composes primitives, templates, applicability, parameters,
-verification, and examples; an **operation** is one immutable invocation of a capability against a compatible
-base state. Capabilities are versioned in `.seh-capabilities/`; operation records are local runtime evidence.
+SEH; a **capability** composes primitives, templates, applicability, parameters, verification, and examples;
+an **operation** is one immutable invocation of a capability against a compatible base state. The current
+runtime accepts the restricted `seh.capability.phase0/v0.1` profile; `seh.capability/v0.1` is the pending
+public contract. Installed capabilities are versioned in `.seh-capabilities/`. Persisted operation evidence
+under local `.seh/` state belongs to M2 and is not implemented yet.
 
-Lifecycle: **establish Git baseline** (the coding task starts in a clean worktree and records its tree) →
+Target lifecycle: **establish Git baseline** (the coding task starts in a clean worktree and records its tree) →
 **implement** → **offer** (after the change succeeds, the agent notices a reusable procedure) → **confirm**
 (the *developer* decides — after one occurrence recurrence can only be predicted, not known) → **materialize
 capture** (copy the declared `before` bytes from the recorded baseline and the accepted structural patch from
@@ -116,9 +119,10 @@ baseline. The baseline is cheap task-start evidence, not a continuous edit ledge
 from a clean worktree, or its baseline was not recorded, SEH cannot distinguish pre-existing edits from the
 accepted change and must refuse capture. A fixture must never be reconstructed by subtracting the final
 snapshot. Repository multiplicity also does not prove recurrence: capability candidates require repeated
-change events, not merely similar structures. The first spike has not yet exercised fidelity or
-generalization correctly; its evidence and open questions are recorded in
-[`PHASE0_FINDINGS.md`](PHASE0_FINDINGS.md). Determinism is not "same parameters → same repository". It is:
+change events, not merely similar structures. The initial retrospective spike did not exercise fidelity or
+generalization correctly; the later prospective `install` → `run` capture closed both gates. The complete
+evidence and corrections are recorded in [`PHASE0_FINDINGS.md`](PHASE0_FINDINGS.md). Determinism is not
+"same parameters → same repository". It is:
 
 ```text
 capability + parameters + compatible base state → same operation plan and patch
@@ -162,8 +166,8 @@ contract, metric formulas, and payback rules are defined in
 ### seh-adapters
 Integrates external coding agents and language implementations without coupling them to SEH internals.
 
-The Python language adapter (stdlib `ast`) is the default. The Java adapter from PR #1 remains available but
-frozen. Third-party context tools such as Serena may be wired in as an **optional benchmark reference**
+The Python language adapter uses the stdlib `ast` and is the only built-in indexing path. Third-party context
+tools such as Serena may be wired in as an **optional benchmark reference**
 (quantifying how much economy comes from semantic navigation alone) — never as a runtime dependency of SEH
 itself.
 

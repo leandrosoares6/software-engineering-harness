@@ -31,6 +31,8 @@ def _validated_store(config: SehConfig) -> GraphStore:
         raise StateError("SEH is initialized but not indexed; run seh index")
     if Path(metadata.repository_root) != config.root:
         raise StateError("SEH index belongs to another repository; run seh index")
+    if metadata.indexer_version != __version__:
+        raise StateError("SEH index was built by another indexer version; run seh index")
     if metadata.fingerprint != state_fingerprint(config.root):
         raise StateError("SEH index is stale; run seh index")
     return store

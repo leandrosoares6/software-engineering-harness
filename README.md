@@ -6,7 +6,7 @@ SEH is a model-agnostic engineering harness designed to reduce unnecessary LLM u
 
 ## Status
 
-`0.1.0a2` — foundation prototype.
+`0.1.0a3` — Python-first foundation prototype.
 
 The first milestone intentionally contains **no LLM integration**. It proves the deterministic substrate first: Git-aware repository indexing, a structural graph, and queryable engineering context.
 
@@ -97,16 +97,16 @@ External coding agent
 
 - Git repository discovery
 - zero-infrastructure SQLite graph store
-- Java AST indexing with Tree-sitter
+- Python indexing with the standard-library `ast` module
 - symbol inspection
 - neighborhood queries
 - schema-versioned graph provenance and freshness checks
 - no LLM dependency
 
-The Java adapter indexes classes, interfaces, enums, records, nested types,
-methods, constructors, imports, inheritance, and interface implementation.
-Only Git-tracked files are indexed; unsupported, external, or ambiguous
-references are reported without creating speculative graph edges.
+The Python adapter indexes modules, classes, nested classes, functions, methods,
+signatures, imports, and inheritance. Only Git-tracked files are indexed;
+unsupported, external, or ambiguous references are reported without creating
+speculative graph edges.
 
 ## License
 

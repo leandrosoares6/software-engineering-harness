@@ -5,6 +5,7 @@ import sqlite3
 import tempfile
 from pathlib import Path
 
+from . import __version__
 from .errors import SchemaError, StateError, StorageError
 from .models import Edge, IndexMetadata, Node
 
@@ -69,7 +70,7 @@ class GraphStore:
         self.replace_graph(
             [],
             [],
-            IndexMetadata("", None, "", "", "0.1.0a2", SCHEMA_VERSION),
+            IndexMetadata("", None, "", "", __version__, SCHEMA_VERSION),
         )
 
     def _require_current_schema(self) -> None:

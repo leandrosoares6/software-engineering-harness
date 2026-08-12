@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "software-engineering-harness"
-version = "0.1.0a2"
+version = "0.1.0a3"
 description = "A model-agnostic engineering harness that spends intelligence where it matters."
 readme = "README.md"
 requires-python = ">=3.11"
@@ -13,8 +13,6 @@ license-files = ["LICENSE"]
 authors = [{ name = "SEH Contributors" }]
 dependencies = [
     "PyYAML>=6.0.2,<7",
-    "tree-sitter>=0.25,<0.27",
-    "tree-sitter-java==0.23.5",
 ]
 
 [project.optional-dependencies]

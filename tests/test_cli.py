@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from argparse import Namespace
 import json
+import sqlite3
 import sys
 
 import pytest
@@ -20,25 +21,25 @@ def test_read_command_does_not_create_state(committed_repo):
 
 
 def test_index_works_in_unborn_repository_and_detects_staleness(git_repo, capsys):
-    source = git_repo / "Thing.java"
-    source.write_text("public class Thing {}\n", encoding="utf-8")
-    git(git_repo, "add", "Thing.java")
+    source = git_repo / "thing.py"
+    source.write_text("class Thing:\n    pass\n", encoding="utf-8")
+    git(git_repo, "add", "thing.py")
 
     assert cmd_index(Namespace(repo=str(git_repo))) == 0
     assert "@ unborn" in capsys.readouterr().out
     assert cmd_inspect(Namespace(repo=str(git_repo), query="Thing")) == 0
-    source.write_text("public class Thing { int changed; }\n", encoding="utf-8")
+    source.write_text("class Thing:\n    changed = True\n", encoding="utf-8")
     with pytest.raises(StateError, match="stale"):
         cmd_inspect(Namespace(repo=str(git_repo), query="Thing"))
 
 
 def test_neighbors_fails_on_ambiguity_and_supports_id(git_repo, capsys):
-    first = git_repo / "a" / "Service.java"
-    second = git_repo / "b" / "Service.java"
+    first = git_repo / "a" / "service.py"
+    second = git_repo / "b" / "service.py"
     first.parent.mkdir()
     second.parent.mkdir()
-    first.write_text("package a; public class Service {}\n", encoding="utf-8")
-    second.write_text("package b; public class Service {}\n", encoding="utf-8")
+    first.write_text("class Service:\n    pass\n", encoding="utf-8")
+    second.write_text("class Service:\n    pass\n", encoding="utf-8")
     git(git_repo, "add", ".")
     cmd_index(Namespace(repo=str(git_repo)))
     capsys.readouterr()
@@ -46,13 +47,17 @@ def test_neighbors_fails_on_ambiguity_and_supports_id(git_repo, capsys):
     args = Namespace(repo=str(git_repo), query="Service", node_id=None)
     assert cmd_neighbors(args) == 2
     candidates = capsys.readouterr().err
-    assert "a.Service" in candidates and "b.Service" in candidates
+    assert "a.service.Service" in candidates and "b.service.Service" in candidates
 
     from seh.config import SehConfig
     from seh.storage import GraphStore
 
     store = GraphStore(SehConfig.for_repo(git_repo).db_path)
-    node_id = next(row["id"] for row in store.search_nodes("a.Service") if row["qualified_name"] == "a.Service")
+    node_id = next(
+        row["id"]
+        for row in store.search_nodes("a.service.Service")
+        if row["qualified_name"] == "a.service.Service"
+    )
     assert cmd_neighbors(Namespace(repo=str(git_repo), query=None, node_id=node_id)) == 0
 
 
@@ -69,9 +74,9 @@ def test_init_is_idempotent_and_uses_canonical_root(committed_repo, capsys):
 
 
 def test_inspect_and_neighbors_report_missing_matches(git_repo, capsys):
-    source = git_repo / "Unique.java"
-    source.write_text("public class Unique {}\n", encoding="utf-8")
-    git(git_repo, "add", "Unique.java")
+    source = git_repo / "unique.py"
+    source.write_text("class Unique:\n    pass\n", encoding="utf-8")
+    git(git_repo, "add", "unique.py")
     cmd_index(Namespace(repo=str(git_repo)))
     capsys.readouterr()
 
@@ -82,12 +87,28 @@ def test_inspect_and_neighbors_report_missing_matches(git_repo, capsys):
 
 
 def test_index_reports_parser_diagnostics(git_repo, capsys):
-    source = git_repo / "Broken.java"
-    source.write_text("public class Broken { void nope( {\n", encoding="utf-8")
-    git(git_repo, "add", "Broken.java")
+    source = git_repo / "broken.py"
+    source.write_text("def broken(:\n", encoding="utf-8")
+    git(git_repo, "add", "broken.py")
 
     assert cmd_index(Namespace(repo=str(git_repo))) == 0
     assert "syntax_error=1" in capsys.readouterr().err
+
+
+def test_read_rejects_index_created_by_another_indexer_version(git_repo, capsys):
+    source = git_repo / "thing.py"
+    source.write_text("class Thing:\n    pass\n", encoding="utf-8")
+    git(git_repo, "add", "thing.py")
+    cmd_index(Namespace(repo=str(git_repo)))
+    capsys.readouterr()
+
+    from seh.config import SehConfig
+
+    with sqlite3.connect(SehConfig.for_repo(git_repo).db_path) as connection:
+        connection.execute("UPDATE metadata SET indexer_version = '0.0.0'")
+
+    with pytest.raises(StateError, match="indexer version"):
+        cmd_inspect(Namespace(repo=str(git_repo), query="Thing"))
 
 
 def test_index_aborts_if_repository_changes_during_scan(git_repo, monkeypatch):

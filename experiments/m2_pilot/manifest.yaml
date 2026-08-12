@@ -1,0 +1,202 @@
+# M2 instrumentation pilot — benchmark manifest
+#
+# Contract: docs/M2_MEASUREMENT_PROTOCOL.md, schema seh.benchmark/v1.
+# Every field here is fixed BEFORE the first attempt runs. A field that changes
+# mid-run invalidates the benchmark rather than amending it.
+#
+# Fields marked REQUIRED-BEFORE-COLLECTION are unresolved and left explicitly
+# empty rather than guessed: after the fact, a fabricated manifest value is
+# indistinguishable from a measured one. See README.md.
+
+schema: seh.benchmark/v1
+protocol_version: "1"
+run_id: m2-pilot-001
+phase: pilot
+
+# --- what is being measured ------------------------------------------------
+
+hypothesis: B
+verdict_pair: "A'->B"
+payback:
+  claimed: false
+  reason: >-
+    The retained capability was authored before M2 instrumentation existed, so
+    its authoring cost is historical and cannot be reconstructed. The protocol
+    forbids claiming payback without a prospectively captured authoring cost.
+    This pilot measures marginal execution only.
+
+# --- repository under test -------------------------------------------------
+
+repository:
+  label: software-engineering-harness
+  rationale: >-
+    SEH itself, not a repository built for the benchmark. Constructing a POC to
+    host the tasks would repeat the snapshot-multiplicity error in a new form.
+    The cost is task leakage, declared under threats below.
+  base_commit: 284b695d58d17a09d0eda09e82b85495e8451bf5
+  base_tree: ebd54bf7918a81b668ddd1703efbbf935887a6c4
+  application_file_fingerprint: REQUIRED-BEFORE-COLLECTION
+  dependency_lock: REQUIRED-BEFORE-COLLECTION
+
+# --- environment identity --------------------------------------------------
+
+environment:
+  seh_version: 0.1.0a3
+  python: "3.12.8"
+  os: Darwin arm64
+  agent: REQUIRED-BEFORE-COLLECTION
+  agent_version: REQUIRED-BEFORE-COLLECTION
+  model: REQUIRED-BEFORE-COLLECTION
+  provider: REQUIRED-BEFORE-COLLECTION
+  adapter: REQUIRED-BEFORE-COLLECTION
+
+# --- experimental design ---------------------------------------------------
+
+design:
+  arms: [A, "A'", B]
+  blocks: 5
+  repetitions_per_cell: 3
+  attempts_total: 45
+  order_seed: REQUIRED-BEFORE-COLLECTION
+  task_timeout_seconds: REQUIRED-BEFORE-COLLECTION
+
+# Each task adds one subcommand to the `capability` group. All five are wanted
+# by the project independently of this benchmark: `show` closes the review
+# affordance gap that `--allow-verification` currently leaves open, `list` is a
+# precondition for `run` being usable at all, `uninstall` supports the
+# removability the capability model promises, `verify` is the seed of the M5 CI
+# health check, and `export` lets an installed capability be edited and
+# re-validated.
+tasks:
+  - id: t1-show
+    subcommand: show
+    intent: print a candidate's manifest, templates and declared commands without executing them
+  - id: t2-list
+    subcommand: list
+    intent: enumerate installed capabilities with id and version
+  - id: t3-uninstall
+    subcommand: uninstall
+    intent: remove an installed capability from the catalogue
+  - id: t4-verify
+    subcommand: verify
+    intent: re-run the four gates against an already-installed capability
+  - id: t5-export
+    subcommand: export
+    intent: write an installed capability back out as an editable candidate package
+
+# Acceptance is executable. No model or human grades correctness.
+acceptance:
+  commands:
+    - executable: python
+      args: ["-m", "pytest", "-q", "tests/"]
+      expected_exit: 0
+    - executable: python
+      args: ["-m", "compileall", "-q", "src"]
+      expected_exit: 0
+  assertions:
+    - the new subcommand parses and dispatches to its own handler
+    - every pre-existing subcommand still parses and dispatches unchanged
+    - src/seh/capability_cli.py gains only the two wiring fragments
+  changed_path_allowlist:
+    - src/seh/capability_cli.py
+    - src/seh/capability_*.py
+    - tests/test_capability_*.py
+
+# --- treatments ------------------------------------------------------------
+
+treatments:
+  arm_a:
+    description: no treatment; the agent has the repository and its ordinary tools
+
+  arm_a_prime:
+    procedure_description_path: procedure_description.md
+    procedure_description_sha256: REQUIRED-BEFORE-COLLECTION
+    author: REQUIRED-BEFORE-COLLECTION
+    reviewer: REQUIRED-BEFORE-COLLECTION
+    authoring_mode: independent
+    note: >-
+      Written from the same accepted `install` change the capability was
+      captured from, and reviewed to be neither deliberately vague nor enriched
+      beyond what the capability encodes.
+
+  arm_b:
+    catalogue:
+      capabilities:
+        - id: seh.add-capability-subcommand
+          version: 1
+          role: treatment
+          package_sha256: REQUIRED-BEFORE-COLLECTION
+      decoys: []
+      selection_cost_measured: false
+    note: >-
+      Single-capability catalogue. Selection is pre-resolved, so the Arm B
+      result is an UPPER BOUND on the SEH effect, not an estimate, and every
+      headline figure must state the catalogue size. A valid decoy would have to
+      be structurally applicable to the same base tree while being semantically
+      wrong for the prompt; none is authored yet.
+
+# --- measurement contract --------------------------------------------------
+
+tokens:
+  default_formula: input_tokens + output_tokens + reasoning_tokens
+  required_fields: [input_tokens, output_tokens]
+  optional_fields: [cache_read_tokens, cache_write_tokens, reasoning_tokens]
+  provider_total_included: false
+  note: >-
+    Cache reads and writes are reported separately and enter a second "provider
+    total" only when the provider documents their billing semantics. Byte-based
+    estimates are diagnostic only and never appear in the primary result.
+
+# --- failure handling ------------------------------------------------------
+
+infrastructure_failure_classes:
+  - agent_process_crash
+  - provider_5xx
+  - provider_rate_limit
+  - harness_error
+  - worktree_preparation_error
+max_substitutions_per_cell: 1
+max_substitutions_per_benchmark: 5
+note_on_failures: >-
+  This list is exhaustive. Anything absent is a task failure, including
+  timeouts, which are a legitimate outcome and never an exclusion. A
+  substitution keeps its logical slot, receives a new trial_id linked to the
+  original, and the original is retained marked excluded_infrastructure. When a
+  limit is exhausted the block becomes measurement_incomplete and yields no
+  verdict.
+
+# --- aggregation -----------------------------------------------------------
+
+aggregation:
+  quality_counted: per_attempt
+  cell_accepted_when: all_repetitions_accepted
+  block_eligible_when: all_three_cells_accepted
+  cell_statistic: median
+  estimand: >-
+    Economics describe blocks in which every arm completed, not the task
+    population as a whole. Per-arm failure counts producing the exclusions are
+    published with the result.
+  confirmatory_sample_size_trigger: REQUIRED-BEFORE-COLLECTION
+
+# --- privacy ---------------------------------------------------------------
+
+retention:
+  raw_traces: local_only
+  location: .seh/
+  max_raw_artifact_bytes: 1048576
+  retention_days: REQUIRED-BEFORE-COLLECTION
+  redaction_patterns: REQUIRED-BEFORE-COLLECTION
+  publishable: sanitized aggregate report only
+
+# --- declared threats ------------------------------------------------------
+
+threats:
+  - >-
+    Task leakage: the tasks are siblings of the `install` event the capability
+    was captured from, so they are maximally favourable to it. Real recurring
+    work is likely to be less uniform.
+  - Selection is pre-resolved; Arm B is an upper bound, not an estimate.
+  - The measured repository is the project measuring itself.
+  - Authoring cost is unavailable, so no payback claim is possible.
+  - R = 3 may be too small to characterize a heavy-tailed latency distribution.
+  - One capability, one project, one agent, one model.

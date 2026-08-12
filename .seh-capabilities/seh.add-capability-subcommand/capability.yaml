@@ -1,0 +1,38 @@
+schema: seh.capability.phase0/v0.1
+id: seh.add-capability-subcommand
+version: 1
+
+parameters:
+  name:
+    type: python_identifier
+
+preconditions:
+  - uses: text.absent
+    with:
+      file: src/seh/capability_cli.py
+      value: "def cmd_{{ name }}("
+
+steps:
+  - uses: splice.after
+    with:
+      file: src/seh/capability_cli.py
+      locator: python.symbol
+      selector: last_with_prefix
+      prefix: cmd_
+      template: templates/handler.py.tmpl
+  - uses: splice.before
+    with:
+      file: src/seh/capability_cli.py
+      locator: python.statement
+      function: configure_capability_parser
+      statement: return
+      lead: "\n"
+      template: templates/parser-registration.py.tmpl
+
+verification:
+  - uses: verify.command
+    with:
+      executable: python
+      args: ["-m", "py_compile", "src/seh/capability_cli.py"]
+      timeout_seconds: 30
+      expected_exit: 0

@@ -78,3 +78,30 @@ def state_fingerprint(root: Path) -> str:
     digest.update(b"\0")
     digest.update(diff)
     return digest.hexdigest()
+
+
+def working_tree_is_clean(root: Path) -> bool:
+    """True when no tracked or untracked change is pending."""
+    return not _run_bytes(root, "status", "--porcelain")[1].strip()
+
+
+def resolve_commit(root: Path, ref: str) -> str:
+    """Resolve a revision to its full commit hash, refusing anything unknown."""
+    code, out, _ = _run_bytes(
+        root, "rev-parse", "--verify", f"{ref}^{{commit}}", allow_failure=True
+    )
+    if code != 0:
+        raise GitError(f"unknown revision: {ref}")
+    return out.decode().strip()
+
+
+def changed_files(root: Path, base: str, target: str) -> list[str]:
+    """Paths that differ between two commits, as normalized POSIX strings."""
+    output = _run_bytes(root, "diff", "--name-only", "--no-renames", base, target)[1]
+    return sorted(line for line in output.decode().splitlines() if line)
+
+
+def file_at_commit(root: Path, commit: str, path: str) -> bytes | None:
+    """Bytes of a tracked file at a commit, or None when it did not exist there."""
+    code, out, _ = _run_bytes(root, "show", f"{commit}:{path}", allow_failure=True)
+    return out if code == 0 else None

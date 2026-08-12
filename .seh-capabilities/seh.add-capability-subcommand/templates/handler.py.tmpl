@@ -1,0 +1,4 @@
+def cmd_{{ name }}(args: argparse.Namespace) -> int:
+    from .capability_{{ name }} import execute
+
+    return execute(args)

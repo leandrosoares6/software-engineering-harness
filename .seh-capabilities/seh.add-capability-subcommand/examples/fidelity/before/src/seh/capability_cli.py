@@ -21,24 +21,6 @@ def cmd_validate(args: argparse.Namespace) -> int:
     return 0
 
 
-def cmd_install(args: argparse.Namespace) -> int:
-    from .capability_install import execute
-
-    return execute(args)
-
-
-def cmd_run(args: argparse.Namespace) -> int:
-    from .capability_run import execute
-
-    return execute(args)
-
-
-def cmd_capture(args: argparse.Namespace) -> int:
-    from .capability_capture import execute
-
-    return execute(args)
-
-
 def configure_capability_parser(subcommands: argparse._SubParsersAction) -> None:
     capability_command = subcommands.add_parser(
         "capability", help="validate and manage deterministic project capabilities"
@@ -59,16 +41,4 @@ def configure_capability_parser(subcommands: argparse._SubParsersAction) -> None
         help="execute reviewed verify.command entries (not sandboxed)",
     )
     validate_command.set_defaults(handler=cmd_validate)
-
-    from .capability_install import configure_parser as configure_install_parser
-
-    configure_install_parser(capability_subcommands, cmd_install)
-
-    from .capability_run import configure_parser as configure_run_parser
-
-    configure_run_parser(capability_subcommands, cmd_run)
-
-    from .capability_capture import configure_parser as configure_capture_parser
-
-    configure_capture_parser(capability_subcommands, cmd_capture)
     return None

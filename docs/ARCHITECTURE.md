@@ -68,6 +68,12 @@ explicit trust decision) → **install** (`seh capability install` promotes the 
 instantiates a deterministic operation with no inference in the path) → **verify**
 (`seh-runtime` executes the suite) → **measure** (`seh-evidence` records tokens and latency avoided).
 
+`run` is plan-only unless the developer supplies both `--apply` and `--allow-verification`. An operation ID
+content-addresses the capability version, normalized parameters, declared base bytes and modes, and patch.
+Application refuses symlinks and stale base bytes, uses exclusive mode-preserving replacements, rolls back
+ordinary partial promotion failures, and rejects a verifier that changes any declared result. Verification
+commands remain explicitly trusted processes rather than an operating-system sandbox.
+
 SEH does not author with an LLM. The agent writes the candidate; SEH only judges it. Local review before
 validation protects the machine executing candidate-declared commands; PR review after installation protects
 the shared catalogue. `validate` and `install` are separate because a rejected candidate must never reach it.
@@ -119,7 +125,9 @@ capability + parameters + compatible base state → same operation plan and patc
 ```
 
 Comparison is scoped to the patch and to the files the capability declares it touches — an unrelated change
-elsewhere in the repository must never invalidate it. Compatibility of the base state is checked
+elsewhere in the repository must never invalidate it. The first retained real capture now exercises
+fidelity and developer-approved generalization; its executable evidence is recorded under
+`experiments/phase0/real_capture/`. Compatibility of the base state is checked
 through local preconditions, not a global fingerprint:
 
 - the expected symbol exists;

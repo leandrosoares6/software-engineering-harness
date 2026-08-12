@@ -375,9 +375,10 @@ An in-memory prospective rehearsal captured the real current bytes and reproduce
 the evolved state. The reference patch used direct literal insertions at explicit text boundaries and did not
 call the capability's AST locators, splice effects, or template constants. This validates the mechanics, not
 the product gate: the second case has not yet been approved or edited by the developer and neither scaffold
-is a retained project change.
+is a retained project change. It was rehearsal evidence only; the later `install` → `run` capture below is
+the retained product gate.
 
-Phase 0 remains open. Its real sequence is intentionally asymmetric:
+Phase 0's technical gate is closed. Its retained sequence is intentionally asymmetric:
 
 1. implement `seh capability validate` manually, creating the command group; this one-time setup is not a
    capture event;
@@ -386,6 +387,11 @@ Phase 0 remains open. Its real sequence is intentionally asymmetric:
 3. derive `add-capability-subcommand` from the accepted `install` event and validate it with the already
    implemented `validate` machinery;
 4. have the capability generate `seh capability run` as the developer-approved generalization event.
+
+That sequence is now preserved as executable evidence under `experiments/phase0/real_capture/`: `install`
+replays the accepted structural subset byte for byte; `run` was proposed before its implementation, approved
+by the developer, and passes generalization; the retained candidate also passes idempotency and safe refusal.
+This closes technical feasibility only. Token, latency, authoring-cost, and payback measurements remain open.
 
 Using `validate` to judge a capability learned from `install` is not circular: the validator is the machine
 that evaluates a candidate, while the candidate is project data describing a repeatable edit. See
@@ -400,11 +406,12 @@ The phase delivers:
 4. all four gates passing for every retained capability;
 5. an explicit record of primitives that were shared, split, added, or rejected.
 
-The first spike record is [`PHASE0_FINDINGS.md`](PHASE0_FINDINGS.md). Its status is evidence, not a completed
-milestone.
+The full record is [`PHASE0_FINDINGS.md`](PHASE0_FINDINGS.md): it preserves both the falsified retrospective
+spike and the prospectively captured event that closed the technical milestone.
 
-No production CLI, final schema parser, MCP surface, arbitrary scripts, capability composition, or extension
-points belong to this phase. Its question is narrower:
+The Phase 0 production CLI is intentionally restricted to `validate`, `install`, and `run`. A final schema,
+MCP surface, arbitrary scripts, capability composition, and extension points remain outside this phase. Its
+question is narrower:
 
 > What is the smallest deterministic language that can express multiple real recurring change events of this
 > project without losing source fidelity?

@@ -41,6 +41,8 @@ seh neighbors UserService
 seh neighbors --id class:0123456789abcdef0123
 seh capability validate ./candidate --allow-verification
 seh capability install ./candidate --allow-verification
+seh capability run seh.add-capability-subcommand --param name=report
+seh capability run seh.add-capability-subcommand --param name=report --apply --allow-verification
 ```
 
 `inspect` lists every partial match with its stable node ID and qualified name.
@@ -61,6 +63,12 @@ promotes it atomically to
 `.seh-capabilities/<capability-id>` under the canonical Git root. It applies the same explicit verification
 trust boundary as `validate`, refuses symlinks and special files, and never overwrites an installed
 capability. A failed gate or promotion leaves no partial capability in the catalogue.
+
+`capability run` plans by default: it loads an installed capability, validates typed parameters and local
+preconditions, and prints a deterministic patch plus a content-addressed operation ID without writing.
+Applying requires both `--apply` and explicit `--allow-verification`. Writes use exclusive sibling
+temporaries, preserve file modes, refuse symlinks and stale base bytes, and restore declared files if
+promotion or verification fails. A verifier that changes any declared result is rejected and rolled back.
 
 ## Architecture direction
 

@@ -11,6 +11,7 @@ from seh.capability import (
     _reproduction_gate,
     apply_candidate,
     load_candidate,
+    validate_candidate,
 )
 
 
@@ -74,15 +75,45 @@ def test_install_fidelity_replays_the_literal_accepted_wiring():
 
 def test_run_proposal_changes_only_the_two_name_parameterized_fragments():
     candidate = load_candidate(CANDIDATE)
-    before = {TARGET: (ROOT.parent.parent / TARGET).read_bytes()}
+    generalization = CANDIDATE / "examples/generalization"
+    before = {TARGET: (generalization / "before" / TARGET).read_bytes()}
 
     after = apply_candidate(candidate, before, {"name": "run"})
 
     proposal = (CANDIDATE / "proposals/run.patch").read_text(encoding="utf-8")
+    assert proposal == (generalization / "expected.patch").read_text(encoding="utf-8")
+    assert proposal == (generalization / "accepted.patch").read_text(encoding="utf-8")
     assert _patch(before, after) == proposal
     assert b"capability_run.py" not in after[TARGET]
     assert b"from .capability_run import execute" in after[TARGET]
     assert b"configure_run_parser(capability_subcommands, cmd_run)" in after[TARGET]
+
+
+def test_real_candidate_passes_fidelity_generalization_idempotency_and_refusal():
+    report = validate_candidate(CANDIDATE, allow_verification=True)
+
+    assert report.passed
+    assert [(gate.name, gate.passed) for gate in report.gates] == [
+        ("fidelity", True),
+        ("generalization", True),
+        ("idempotency", True),
+        ("safe_refusal", True),
+    ]
+
+
+def test_run_generalization_was_proposed_before_implementation_and_approved():
+    scope = yaml.safe_load(
+        (CANDIDATE / "examples/generalization/scope.yaml").read_text(encoding="utf-8")
+    )
+    proposal = (CANDIDATE / "proposals/run.patch").read_bytes()
+
+    assert scope["proposal"]["commit"] == "548bd33ea5d19669a464b01353a6ca58b9087dfa"
+    assert scope["proposal"]["patch_sha256"] == hashlib.sha256(proposal).hexdigest()
+    assert scope["approval"] == {
+        "status": "developer-approved",
+        "instruction": "faça todos esses ajustes",
+    }
+    assert scope["honesty_test"]["provisional_primitive_added_for_coverage"] is False
 
 
 def test_capture_declares_behavioral_exclusions_and_honesty_rationale():

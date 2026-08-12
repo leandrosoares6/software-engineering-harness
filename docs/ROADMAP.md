@@ -57,30 +57,31 @@ structure directly, not an attempt to match Serena/Aider in indexing depth or la
       [`PHASE0_FINDINGS.md`](PHASE0_FINDINGS.md)
 - [x] **third shape-adjacent capability**: `add-java-relation-kind` reused all four predicted primitives and
       confirmed that nested scope addressing is a locator refinement, not a new primitive
-- [ ] **complete the Phase 0 gate with required product events**: `seh capability validate` is implemented by
+- [x] **complete the Phase 0 gate with required product events**: `seh capability validate` is implemented by
       hand as one-time group setup and excluded from fidelity data; after committing it, record a new clean
       Git baseline, implement and capture `install`, derive `add-capability-subcommand`, then generate
       developer-approved `run` as generalization. The validator judging a candidate learned from `install`
       is machinery judging data, not a circular dependency. Everything below is conditional on this
 - [ ] `seh.capability/v0.1` format — intent, typed parameters, applicability, preconditions, primitive steps,
       templates, fixtures, verification, provenance
-- [ ] closed, versioned primitive vocabulary — only primitives exercised by real retained events;
+- [x] closed, versioned Phase 0 primitive vocabulary — only primitives exercised by real retained events;
       `file.render` remains excluded until a recurring procedure genuinely creates files
-- [ ] source-preserving Python edits — AST locates and validates exact spans; textual splice writes; never
+- [x] source-preserving Python edits — AST locates and validates exact spans; textual splice writes; never
       mutate and `ast.unparse()` the module
 - [x] `seh capability validate ./candidate` — restricted Phase 0 profile runs the four gates against an
       agent-authored candidate and scoped pre-implementation fixtures; the final public schema remains open
 - [x] `seh capability install ./candidate` — promotes a validated candidate into the catalogue; a rejected
       candidate never reaches it
-- [ ] **the four gates**: fidelity (rebuilds its own first example), generalization (produces a correct
+- [x] **the four gates**: fidelity (rebuilds its own first example), generalization (produces a correct
       second case, proposed by the agent and approved by the developer), idempotency (re-applying does not
       duplicate or corrupt), safe refusal (incompatible structure errors out explicitly)
 - [ ] developer-confirmed capture — every eligible task records a clean Git baseline; after success the
       agent may offer and the developer decides; missing or dirty baseline causes explicit refusal
-- [ ] `seh capability run CAPABILITY_ID` — instantiates an immutable operation with no inference in the path
-- [ ] **AST-anchored insertion into existing files** (the hard part scaffolders skip; one well-defined
+- [x] `seh capability run CAPABILITY_ID` — plans by default and instantiates a content-addressed immutable
+      operation with no inference in the path; apply requires explicit verification consent
+- [x] **AST-anchored insertion into existing files** (the hard part scaffolders skip; one well-defined
       anchor kind in the MVP, not a generic engine)
-- [ ] operation contract scoped to the patch: `capability + parameters + compatible base state → same operation
+- [x] operation contract scoped to the patch: `capability + parameters + compatible base state → same operation
       plan and patch`, compared only over declared files, with local preconditions — never a whole-repository
       fingerprint
 - [ ] compact catalogue projection — the model sees only intent and parameter summaries after deterministic
@@ -95,10 +96,10 @@ M1a, M2 and M3 all belong to the MVP, but M3 is the differentiator. M1a and M2 e
 M1a provides the AST substrate that structural insertion needs, M2 verifies every operation and reports the
 numbers.
 
-The falsification point is **technical before economic**. The spike proved source-preserving structure and
-primitive reuse, not fidelity or procedural recurrence. Phase 0 remains open until gates 1–2 run against
-fixtures captured prospectively from true change events. If that fails, nothing else matters; only then does
-payback become the question.
+The falsification point is **technical before economic**. The first retrospective spike correctly failed;
+the prospectively captured `install` → `run` sequence subsequently passed fidelity and developer-approved
+generalization without expanding the primitive vocabulary for coverage. Technical feasibility is closed.
+Payback — tokens, latency, authoring cost, and repetitions to amortize a capability — is now the open test.
 
 ## M4 — Distribution
 - [ ] MCP server exposure (single-command install, no external process to configure) — exposes

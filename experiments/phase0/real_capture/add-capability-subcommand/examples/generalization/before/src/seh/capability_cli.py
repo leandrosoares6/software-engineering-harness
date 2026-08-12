@@ -27,12 +27,6 @@ def cmd_install(args: argparse.Namespace) -> int:
     return execute(args)
 
 
-def cmd_run(args: argparse.Namespace) -> int:
-    from .capability_run import execute
-
-    return execute(args)
-
-
 def configure_capability_parser(subcommands: argparse._SubParsersAction) -> None:
     capability_command = subcommands.add_parser(
         "capability", help="validate and manage deterministic project capabilities"
@@ -57,8 +51,4 @@ def configure_capability_parser(subcommands: argparse._SubParsersAction) -> None
     from .capability_install import configure_parser as configure_install_parser
 
     configure_install_parser(capability_subcommands, cmd_install)
-
-    from .capability_run import configure_parser as configure_run_parser
-
-    configure_run_parser(capability_subcommands, cmd_run)
     return None

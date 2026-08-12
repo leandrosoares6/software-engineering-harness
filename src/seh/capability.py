@@ -502,7 +502,7 @@ def apply_candidate(
     return state
 
 
-def _patch(before: dict[str, bytes], after: dict[str, bytes]) -> str:
+def render_patch(before: dict[str, bytes], after: dict[str, bytes]) -> str:
     chunks: list[str] = []
     for path in sorted(set(before) | set(after)):
         old = before.get(path, b"")
@@ -522,6 +522,68 @@ def _patch(before: dict[str, bytes], after: dict[str, bytes]) -> str:
     return "".join(chunks)
 
 
+# Retained for existing callers and tests that predate the public name.
+_patch = render_patch
+
+
+def declared_files(candidate: Candidate) -> tuple[str, ...]:
+    """Every repository path the candidate declares it reads or writes.
+
+    An operation must never touch a file outside this set, so callers use it to
+    bound both the base state they read and the patch they may apply.
+    """
+    paths: list[str] = []
+    for invocation in (*candidate.preconditions, *candidate.steps):
+        path = _relative_path(invocation.config.get("file"), "declared file")
+        if path not in paths:
+            paths.append(path)
+    return tuple(paths)
+
+
+def run_verification(
+    candidate: Candidate,
+    parameters: dict[str, Any],
+    working_directory: Path,
+) -> None:
+    """Execute the declared verification commands in `working_directory`.
+
+    Shared by gate replay, which materializes a fixture into a temporary tree,
+    and by real operations, which verify the repository itself. This is not an
+    OS sandbox: a declared command runs with the caller's privileges.
+    """
+    for index, invocation in enumerate(candidate.verification):
+        config = invocation.config
+        executable = _render(config["executable"], parameters, f"verification[{index}]")
+        args = [
+            _render(arg, parameters, f"verification[{index}]") for arg in config["args"]
+        ]
+        try:
+            result = subprocess.run(
+                [executable, *args],
+                cwd=working_directory,
+                capture_output=True,
+                text=True,
+                shell=False,
+                timeout=config["timeout_seconds"],
+                check=False,
+            )
+        except subprocess.TimeoutExpired as exc:
+            raise CapabilityRefusal(
+                f"verification command timed out after {config['timeout_seconds']}s"
+            ) from exc
+        except OSError as exc:
+            raise CapabilityRefusal(
+                f"unable to execute verification command: {exc}"
+            ) from exc
+        if result.returncode != config["expected_exit"]:
+            detail = (result.stderr or result.stdout).strip()
+            suffix = f": {detail}" if detail else ""
+            raise CapabilityRefusal(
+                f"verification command exited {result.returncode}; "
+                f"expected {config['expected_exit']}{suffix}"
+            )
+
+
 def _verify(
     candidate: Candidate, state: dict[str, bytes], parameters: dict[str, Any]
 ) -> None:
@@ -533,40 +595,7 @@ def _verify(
             )
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_bytes(content)
-        for index, invocation in enumerate(candidate.verification):
-            config = invocation.config
-            executable = _render(
-                config["executable"], parameters, f"verification[{index}]"
-            )
-            args = [
-                _render(arg, parameters, f"verification[{index}]")
-                for arg in config["args"]
-            ]
-            try:
-                result = subprocess.run(
-                    [executable, *args],
-                    cwd=root,
-                    capture_output=True,
-                    text=True,
-                    shell=False,
-                    timeout=config["timeout_seconds"],
-                    check=False,
-                )
-            except subprocess.TimeoutExpired as exc:
-                raise CapabilityRefusal(
-                    f"verification command timed out after {config['timeout_seconds']}s"
-                ) from exc
-            except OSError as exc:
-                raise CapabilityRefusal(
-                    f"unable to execute verification command: {exc}"
-                ) from exc
-            if result.returncode != config["expected_exit"]:
-                detail = (result.stderr or result.stdout).strip()
-                suffix = f": {detail}" if detail else ""
-                raise CapabilityRefusal(
-                    f"verification command exited {result.returncode}; "
-                    f"expected {config['expected_exit']}{suffix}"
-                )
+        run_verification(candidate, parameters, root)
 
 
 def _reproduction_gate(candidate: Candidate, case: Case) -> GateResult:

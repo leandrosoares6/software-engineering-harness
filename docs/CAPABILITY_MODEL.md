@@ -302,6 +302,34 @@ occur in `accepted.patch` with the same file, ranges, and body. Only Git's optio
 second `@@` is normalized because the runtime renderer does not emit it. Missing artifacts, malformed scope
 YAML, or a hunk not present in the accepted change fail closed.
 
+**Containment alone is a closed loop, and it once let a dishonest package through.** Both patches are
+author-supplied text checked only against each other, so editing them together — to make a fixture fit a
+limitation of the templates — satisfied every gate while the package claimed a change the developer had
+never accepted. `scope.yaml` named the two commits that would have exposed it, and nothing read them. Two
+anchors outside the package now close that loop:
+
+- **Recorded digests.** `scope.yaml` carries `artifacts.accepted_patch_sha256` and
+  `artifacts.expected_patch_sha256`, written when the patches were generated. A patch edited without its
+  record fails to load. This anchor travels inside the package and needs no repository, but it is a
+  consistency anchor rather than a security boundary: whoever edits the patch can edit the digest.
+- **Recomputation from history.** Every line `expected.patch` adds must be present in the declared file at
+  the accepted commit, and every line it removes must have been present at the baseline. This is the check a
+  self-consistent forgery cannot survive. It compares content rather than rendered bytes, because hunk
+  offsets and `/dev/null` headers are renderer-dependent, and a byte comparison would fail honest packages
+  while catching no fabrication.
+
+Provenance is reported as `verified`, `unreachable` or `not_declared` on every `validate` and `install`, and
+a contradiction refuses the package before any gate runs — there is nothing worth measuring against a
+fabricated reference. `unreachable` is a legitimate outcome, since a rebase, a squash merge, a shallow clone
+or a package copied out of its origin repository all destroy reachability without implying dishonesty; it is
+printed precisely so a digest-only package can never be mistaken for a history-verified one. A `commit` value
+that is present but unreadable — an all-digit revision, which YAML parses as an integer — is an error rather
+than a silent downgrade to `not_declared`.
+
+The limitation this closes must be stated the other way round too: when a capability cannot express part of
+an accepted change, that part belongs under `excluded` with a reason. Adjusting a patch to match what the
+templates happen to produce is the failure, not the workaround.
+
 The captured bytes become scoped fixtures of declared files, not long-lived Git references. The fixture
 survives later rebases and squash merges because it stores the real state directly. It contains only the
 minimum state needed to exercise the capability.

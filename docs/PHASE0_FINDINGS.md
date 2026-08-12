@@ -74,10 +74,38 @@ outside the admitted vocabulary until a real recurring event requires it.
 Introducing a module solely to exercise a provisional primitive would fabricate
 evidence and violate the same honesty rule the gates enforce.
 
+### A gate is worth no more than the reference it measures against
+
+Found 2026-08-12, in a POC the developer built in a separate repository. That capability cleared all four
+gates while its fidelity case claimed the developer had accepted
+`add_parser("status", help="TODO")`. The accepted commit says `help="show status"`. Both patches had been
+edited to match what the templates could produce, and the check that should have caught it — every
+`expected.patch` hunk must occur in `accepted.patch` — compared two author-supplied files against each other
+and nothing else. `scope.yaml` recorded the baseline and accepted commits one line above, and no code read
+them.
+
+The defect was not the POC's. `capture` wrote no digests and validation resolved no commits, so the product
+made an unfalsifiable claim available and a reasonable author took it.
+
+Two consequences are retained. First the anchoring itself, now normative in
+[`CAPABILITY_MODEL.md`](CAPABILITY_MODEL.md): digests recorded at capture, plus recomputation of the
+structural claim from the declared commits, with the outcome reported on every run so an unreachable history
+is never mistaken for a verified one. Second the general rule — **when a capability cannot express part of an
+accepted change, the excluded part is the finding.** Adjusting the reference to fit the tooling converts a
+known limitation into a silent false claim, and it does so without anyone deciding to lie.
+
+One discarded design is worth recording, because it looked right. Byte-comparing `accepted.patch` against a
+freshly rendered diff failed the project's *own* honest capability: `git` writes `--- /dev/null` for a created
+file where `render_patch` writes `--- a/<path>`. Anchoring to a renderer would have invalidated every stored
+package on any change to that renderer, while catching no fabrication. The check verifies claimed content
+against the two commits instead.
+
 ## What is proved
 
 - one prospectively captured capability reproduces its accepted structural
   subset byte-for-byte;
+- that reproduction is anchored to the accepted commit, not to the package's own
+  files;
 - it generalizes to a developer-approved second event;
 - replay is deterministic and content-addressed;
 - duplicate application and incompatible anchors refuse safely;

@@ -26,6 +26,12 @@ def execute(args: argparse.Namespace) -> int:
         f"v{installation.version} "
         f"at {installation.destination}"
     )
+    if installation.report.provenance is not None:
+        # What enters the catalogue is versioned procedural memory, so how
+        # strongly it is anchored to history belongs in the install record, not
+        # only in a validate run the reviewer may never have seen.
+        provenance = installation.report.provenance
+        print(f"  {provenance.status}: {provenance.detail}")
     return 0
 
 

@@ -8,9 +8,12 @@ import subprocess
 import tempfile
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import yaml
+
+if TYPE_CHECKING:  # `provenance` imports this module, so the cycle stays lazy
+    from .provenance import ProvenanceResult
 
 from .errors import CapabilityError, CapabilityRefusal
 from .source_edit import (
@@ -57,6 +60,10 @@ class GateResult:
 class ValidationReport:
     capability_id: str
     gates: tuple[GateResult, ...]
+    # Whether the fidelity patch was confirmed against Git history.
+    # `validate_candidate` always sets it, so a reader never has to assume it was
+    # checked; it stays optional only for reports built by other callers.
+    provenance: ProvenanceResult | None = None
 
     @property
     def passed(self) -> bool:
@@ -70,6 +77,11 @@ class Case:
     before: dict[str, bytes]
     expected_patch: str | None
     approved: bool | None
+    # Read from scope.yaml: the accepted change this case claims to be a subset
+    # of, and the commits that can prove it. None for a case carrying no patch.
+    accepted_patch: str | None = None
+    baseline_commit: str | None = None
+    accepted_commit: str | None = None
 
 
 def _read_limited(path: Path) -> bytes:
@@ -355,18 +367,52 @@ def _patch_hunks(patch: str, label: str) -> tuple[tuple[str, str], ...]:
     return tuple(hunks)
 
 
-def _validate_patch_scope(case_root: Path, name: str, expected_patch: str) -> None:
+def _recorded_digest(scope: dict[str, Any], key: str, name: str) -> str:
+    artifacts = scope.get("artifacts")
+    if artifacts is None:
+        raise CapabilityError(
+            f"{name} scope.yaml declares no artifacts block; the patches would be "
+            "anchored only to each other"
+        )
+    recorded = _mapping(artifacts, f"{name} artifacts").get(key)
+    if not isinstance(recorded, str) or not recorded:
+        raise CapabilityError(f"{name} scope.yaml declares no {key}")
+    return recorded
+
+
+def _validate_patch_scope(
+    case_root: Path, name: str, expected_patch: str
+) -> tuple[str, str | None, str | None]:
+    """Check a case's patches against their records, and report their anchors.
+
+    Containment alone is a closed loop: both patches are author-supplied text, so
+    editing them together to suit a limitation of the templates leaves the check
+    satisfied and the package dishonest. The recorded digests break the loop by
+    pinning each patch to a value written when it was generated. The returned
+    commits let the caller go further and recompute the accepted change from Git.
+    """
+    from .provenance import digest
+
     accepted_path = _inside(case_root, "accepted.patch", f"{name} accepted.patch")
     if not accepted_path.is_file():
         raise CapabilityError(f"missing {name} accepted.patch")
     scope_path = _inside(case_root, "scope.yaml", f"{name} scope.yaml")
     if not scope_path.is_file():
         raise CapabilityError(f"missing {name} scope.yaml")
-    _mapping(_safe_yaml(scope_path, f"{name} scope"), f"{name} scope")
+    scope = _mapping(_safe_yaml(scope_path, f"{name} scope"), f"{name} scope")
     try:
         accepted_patch = _read_limited(accepted_path).decode("utf-8")
     except UnicodeDecodeError as exc:
         raise CapabilityError(f"{name} accepted.patch is not UTF-8") from exc
+
+    for artifact, patch in (("accepted", accepted_patch), ("expected", expected_patch)):
+        recorded = _recorded_digest(scope, f"{artifact}_patch_sha256", name)
+        actual = digest(patch)
+        if actual != recorded:
+            raise CapabilityError(
+                f"{name} {artifact}.patch does not match its recorded digest in "
+                f"scope.yaml: recorded {recorded[:12]}..., actual sha256 {actual}"
+            )
 
     accepted_hunks = set(_patch_hunks(accepted_patch, f"{name} accepted.patch"))
     for hunk in _patch_hunks(expected_patch, f"{name} expected.patch"):
@@ -374,6 +420,34 @@ def _validate_patch_scope(case_root: Path, name: str, expected_patch: str) -> No
             raise CapabilityError(
                 f"{name} expected.patch hunk is not contained in accepted.patch"
             )
+
+    return (
+        accepted_patch,
+        _commit(scope, "baseline", name),
+        _commit(scope, "accepted", name),
+    )
+
+
+def _commit(scope: dict[str, Any], key: str, name: str) -> str | None:
+    """Read `<key>.commit`, or None when the section is absent entirely.
+
+    A section that is present but unreadable is an error rather than a None: an
+    all-digit revision is parsed by YAML as an integer, and silently treating
+    that as "no history declared" would downgrade the strongest check to the
+    weakest without anyone noticing.
+    """
+    section = scope.get(key)
+    if section is None:
+        return None
+    if not isinstance(section, dict) or "commit" not in section:
+        raise CapabilityError(f"{name} scope.yaml {key} declares no commit")
+    commit = section["commit"]
+    if not isinstance(commit, str) or not commit:
+        raise CapabilityError(
+            f"{name} scope.yaml {key}.commit must be a quoted revision string, "
+            f"not {type(commit).__name__}"
+        )
+    return commit
 
 
 def _load_case(candidate: Candidate, name: str, *, expected: bool) -> Case:
@@ -404,6 +478,9 @@ def _load_case(candidate: Candidate, name: str, *, expected: bool) -> Case:
     if not before:
         raise CapabilityError(f"{name} before fixture is empty")
     expected_patch: str | None = None
+    accepted_patch: str | None = None
+    baseline_commit: str | None = None
+    accepted_commit: str | None = None
     if expected:
         patch_path = _inside(
             candidate.root, f"{relative_root}/expected.patch", f"{name} expected.patch"
@@ -414,11 +491,22 @@ def _load_case(candidate: Candidate, name: str, *, expected: bool) -> Case:
             expected_patch = _read_limited(patch_path).decode("utf-8")
         except UnicodeDecodeError as exc:
             raise CapabilityError(f"{name} expected.patch is not UTF-8") from exc
-        _validate_patch_scope(case_path.parent, name, expected_patch)
+        accepted_patch, baseline_commit, accepted_commit = _validate_patch_scope(
+            case_path.parent, name, expected_patch
+        )
     approved = raw.get("approved")
     if approved is not None and not isinstance(approved, bool):
         raise CapabilityError(f"{name} approved must be boolean")
-    return Case(name, parameters, before, expected_patch, approved)
+    return Case(
+        name,
+        parameters,
+        before,
+        expected_patch,
+        approved,
+        accepted_patch,
+        baseline_commit,
+        accepted_commit,
+    )
 
 
 def _fixture_paths(root: Path, name: str) -> list[Path]:
@@ -659,14 +747,31 @@ def validate_candidate(
             "verification commands are disabled; review the candidate and rerun with "
             "--allow-verification"
         )
+    from .provenance import verify_structural_claim
+
     candidate = load_candidate(path)
     fidelity = _load_case(candidate, "fidelity", expected=True)
     generalization = _load_case(candidate, "generalization", expected=True)
     refusal = _load_case(candidate, "refusal", expected=False)
+
+    # Before running any gate: the fidelity case claims to reproduce a change the
+    # developer accepted, so check that claim against the commits scope.yaml
+    # names. A contradiction means the package misrepresents history, which is a
+    # load-time refusal rather than a failing gate — there is nothing worth
+    # measuring against a fabricated reference.
+    provenance = verify_structural_claim(
+        candidate.root,
+        fidelity.baseline_commit,
+        fidelity.accepted_commit,
+        fidelity.expected_patch or "",
+    )
+    if provenance.contradicted:
+        raise CapabilityError(f"fidelity provenance failed: {provenance.detail}")
+
     gates = (
         _reproduction_gate(candidate, fidelity),
         _reproduction_gate(candidate, generalization),
         _idempotency_gate(candidate, fidelity),
         _refusal_gate(candidate, refusal),
     )
-    return ValidationReport(candidate.capability_id, gates)
+    return ValidationReport(candidate.capability_id, gates, provenance)

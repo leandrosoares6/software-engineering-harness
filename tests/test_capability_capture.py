@@ -17,10 +17,11 @@ from pathlib import Path
 import pytest
 
 from seh.capability import validate_candidate
+from test_capability import record_scope_digests
 from seh.capability_capture import capture
 from seh.errors import CapabilityError, CapabilityRefusal
 
-BASE_REGISTRY = '''from __future__ import annotations
+BASE_REGISTRY = """from __future__ import annotations
 
 
 def handler_seed() -> str:
@@ -30,9 +31,9 @@ def handler_seed() -> str:
 def build_registry() -> dict:
     registry: dict = {}
     return registry
-'''
+"""
 
-ACCEPTED_REGISTRY = '''from __future__ import annotations
+ACCEPTED_REGISTRY = """from __future__ import annotations
 
 
 def handler_seed() -> str:
@@ -47,7 +48,7 @@ def build_registry() -> dict:
     registry: dict = {}
     registry["ping"] = handler_ping
     return registry
-'''
+"""
 
 MANIFEST = """schema: seh.capability.phase0/v0.1
 id: app.add-registry-handler
@@ -334,6 +335,10 @@ def test_captured_candidate_passes_the_four_gates_in_an_external_repository(
     )
     generalization.joinpath("expected.patch").write_text(patch, encoding="utf-8")
     generalization.joinpath("accepted.patch").write_text(patch, encoding="utf-8")
+    # The second case is authored, not captured, so its digests are recorded by
+    # whoever wrote it. `capture` pre-fills this case from the fidelity change,
+    # and every byte of that pre-fill is meant to be replaced.
+    record_scope_digests(generalization)
 
     refusal = candidate / "examples" / "refusal"
     refusal.joinpath("before/app/registry.py").write_text(

@@ -5,6 +5,9 @@ proposal:
 approval:
   status: developer-approved
   instruction: faça todos esses ajustes
+artifacts:
+  accepted_patch_sha256: 2602b9f072e72ea16fde1deed5e53ba59f2f0dbf48110edd6e63762f8b5bb427
+  expected_patch_sha256: 2602b9f072e72ea16fde1deed5e53ba59f2f0dbf48110edd6e63762f8b5bb427
 included:
   - path: src/seh/capability_cli.py
     hunks: 2

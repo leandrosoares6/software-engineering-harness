@@ -64,7 +64,12 @@ seh capability capture \
 
 `capture` reads the `before` bytes from the baseline commit — never by subtracting from the current tree,
 because ordering and surrounding bytes are historical facts. It writes the fixtures, `accepted.patch`,
-`expected.patch`, and a `scope.yaml` listing what it treated as structure and what it excluded as behaviour.
+`expected.patch`, and a `scope.yaml` listing what it treated as structure, what it excluded as behaviour, the
+two commits involved, and a digest of each patch.
+
+Those last two matter. If a capability cannot express part of the change you accepted, declare that part
+under `excluded` — do not adjust the patches to match what your templates happen to produce. Validation
+recomputes the structural claim from the two commits and refuses a package that misrepresents them.
 
 It deliberately stops there. `templates/`, `parameters` and `steps` are left as `TODO(agent)`, because
 separating structure from domain is a judgement call and SEH must not make it for you. Fill them in — this is
@@ -116,6 +121,7 @@ seh capability validate ./candidate --allow-verification
 
 ```text
 Capability app.add-registry-handler
+  verified: expected.patch is consistent with 717e87797ec2..abbb477cfb40 (1 file/s)
   PASS fidelity: patch and verification match
   PASS generalization: patch and verification match
   PASS idempotency: second application refused explicitly
@@ -126,6 +132,12 @@ Four gates, all required. **Fidelity** rebuilds the change you already accepted.
 second case with different parameters, which you approve — fidelity alone only proves memorization.
 **Idempotency** refuses a second application. **Safe refusal** errors out on an incompatible tree instead of
 adapting to it.
+
+The first line is **provenance**, and it is not a gate — it is what the gates are measured against. Every line
+the capability claims to have produced is looked up in the accepted commit. `verified` means history agrees;
+`unreachable` means the commits are no longer in the repository (a rebase, a squash merge, a fresh shallow
+clone), so the patches rest on their recorded digests alone. It is printed either way, because those two are
+not the same assurance. A package that contradicts its own commits is refused before any gate runs.
 
 Verification is denied by default. A candidate declares commands that SEH will execute, so review it — every
 command — before opting in with `--allow-verification`. Commands run with an argument vector, no shell, and a
@@ -204,6 +216,9 @@ pattern proves reusable, it can be crystallized as a deterministic capability. I
 produces an operation the project can execute, verify, and measure without inference. The developer continues
 to work through natural-language prompts, while recurring engineering procedures progressively move out of
 the model's context and into reviewable project capabilities.
+
+See [Target Scenario](docs/TARGET_SCENARIO.md) for the intended developer experience and the wiring-ratio
+rule that decides when a capability is worth capturing at all.
 
 See [Product Scenario: A Python Project That Learns How It Is Built](docs/PRODUCT_SCENARIO.md) for the
 end-to-end developer experience and [SEH Capability Model](docs/CAPABILITY_MODEL.md) for the primitive,

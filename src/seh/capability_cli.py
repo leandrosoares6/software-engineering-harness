@@ -12,6 +12,10 @@ def cmd_validate(args: argparse.Namespace) -> int:
         Path(args.candidate), allow_verification=args.allow_verification
     )
     print(f"Capability {report.capability_id}")
+    if report.provenance is not None:
+        # Printed on every run, including when history could not be reached: a
+        # reader must never mistake a digest-only package for a verified one.
+        print(f"  {report.provenance.status}: {report.provenance.detail}")
     for gate in report.gates:
         status = "PASS" if gate.passed else "FAIL"
         print(f"  {status:4} {gate.name}: {gate.detail}")

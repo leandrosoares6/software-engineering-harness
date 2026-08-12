@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import difflib
+import hashlib
 import subprocess
 import sys
 from argparse import Namespace
@@ -87,10 +88,30 @@ def _write_case(
         expected_patch = _patch(source, expected)
         (case / "expected.patch").write_text(expected_patch, encoding="utf-8")
         (case / "accepted.patch").write_text(expected_patch, encoding="utf-8")
-        (case / "scope.yaml").write_text(
-            "rationale: structural subset selected from an accepted change\n",
-            encoding="utf-8",
-        )
+        record_scope_digests(case)
+
+
+def record_scope_digests(case: Path) -> None:
+    """Write scope.yaml with digests matching the case's patches on disk.
+
+    A test that rewrites a patch must call this afterwards. Without it the
+    package no longer loads, so a test aiming at a gate would silently start
+    measuring the digest check instead.
+
+    These fixtures carry no baseline and accepted commit pair, because they are
+    synthesized rather than captured from history. Provenance therefore reports
+    `not_declared` for them, which `test_synthesized_fixture_declares_no_history`
+    pins.
+    """
+    accepted = (case / "accepted.patch").read_bytes()
+    expected = (case / "expected.patch").read_bytes()
+    (case / "scope.yaml").write_text(
+        "rationale: structural subset selected from an accepted change\n"
+        "artifacts:\n"
+        f"  accepted_patch_sha256: {hashlib.sha256(accepted).hexdigest()}\n"
+        f"  expected_patch_sha256: {hashlib.sha256(expected).hexdigest()}\n",
+        encoding="utf-8",
+    )
 
 
 def candidate_package(tmp_path: Path) -> Path:
@@ -186,6 +207,8 @@ def set_different_expected_patch(candidate: Path) -> None:
     different = _patch(BASE_SOURCE, BASE_SOURCE + b"# unexpected\n")
     (case / "expected.patch").write_text(different, encoding="utf-8")
     (case / "accepted.patch").write_text(different, encoding="utf-8")
+    # Re-record, so the package still loads and the fidelity gate is what fails.
+    record_scope_digests(case)
 
 
 def test_validate_candidate_passes_all_four_gates(tmp_path):
@@ -542,6 +565,7 @@ def test_expected_patch_hunks_must_be_contained_in_accepted_patch(tmp_path):
         "--- a/other.py\n+++ b/other.py\n@@ -1 +1 @@\n-old\n+new\n",
         encoding="utf-8",
     )
+    record_scope_digests(accepted.parent)
 
     with pytest.raises(CapabilityError, match="not contained in accepted.patch"):
         _validate(candidate)
@@ -563,6 +587,7 @@ def test_accepted_patch_may_include_git_envelope_and_unrelated_hunks(tmp_path):
         "+new\n"
     )
     (case / "accepted.patch").write_text(accepted, encoding="utf-8")
+    record_scope_digests(case)
 
     assert _validate(candidate).passed
 
@@ -573,6 +598,7 @@ def test_scope_containment_ignores_only_git_hunk_section_labels(tmp_path):
     expected = (case / "expected.patch").read_text(encoding="utf-8")
     git_labeled = expected.replace(" @@\n", " @@ def build_parser()\n")
     (case / "accepted.patch").write_text(git_labeled, encoding="utf-8")
+    record_scope_digests(case)
 
     assert _validate(candidate).passed
 

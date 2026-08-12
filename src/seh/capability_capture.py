@@ -6,13 +6,8 @@ from typing import Callable
 
 from .capability import SCHEMA, render_patch
 from .errors import CapabilityError, CapabilityRefusal
-from .git import (
-    changed_files,
-    file_at_commit,
-    repository_root,
-    resolve_commit,
-    working_tree_is_clean,
-)
+from .git import repository_root, resolve_commit, working_tree_is_clean
+from .provenance import accepted_change, digest
 
 CASE_NAMES = ("fidelity", "generalization", "refusal")
 
@@ -54,6 +49,15 @@ SCOPE_TEMPLATE = """baseline:
   commit: {baseline}
 accepted:
   commit: {accepted}
+# Written when the patches were generated from the two commits above. Validation
+# rejects a patch whose bytes stop matching its digest, and recomputes the
+# accepted change from those commits whenever they are still reachable. So a
+# patch edited to fit a limitation of the templates fails instead of passing
+# quietly: declare the limitation under `excluded` rather than adjusting these
+# files.
+artifacts:
+  accepted_patch_sha256: {accepted_patch_sha256}
+  expected_patch_sha256: {expected_patch_sha256}
 {included}{excluded}honesty_test:
   would_do_this_without_capture: "TODO(developer): yes/no, and why"
 """
@@ -70,15 +74,6 @@ def _relative(value: str) -> str:
             f"declared file must be a normalized relative path: {value!r}"
         )
     return path.as_posix()
-
-
-def _state(root: Path, commit: str, paths: list[str]) -> dict[str, bytes]:
-    state: dict[str, bytes] = {}
-    for path in paths:
-        content = file_at_commit(root, commit, path)
-        if content is not None:
-            state[path] = content
-    return state
 
 
 def _yaml_scalar(value: str) -> str:
@@ -135,7 +130,8 @@ def capture(
     if not declared_paths:
         raise CapabilityError("at least one --file must be declared")
 
-    changed = changed_files(root, base, accepted)
+    change = accepted_change(root, base, accepted)
+    changed = change.changed
     if not changed:
         raise CapabilityRefusal("no files changed between the baseline and HEAD")
 
@@ -151,22 +147,24 @@ def capture(
 
     # Both patches come from the same renderer, so the structural subset is
     # contained in the accepted change by construction rather than by assertion.
-    all_before = _state(root, base, changed)
-    all_after = _state(root, accepted, changed)
+    # That renderer is shared with validation, so the digests recorded below are
+    # reproducible by the verifier rather than merely asserted here.
     declared_before = {
-        path: all_before[path] for path in declared_paths if path in all_before
+        path: change.before[path] for path in declared_paths if path in change.before
     }
     declared_after = {
-        path: all_after[path] for path in declared_paths if path in all_after
+        path: change.after[path] for path in declared_paths if path in change.after
     }
 
-    accepted_patch = render_patch(all_before, all_after)
+    accepted_patch = change.patch
     expected_patch = render_patch(declared_before, declared_after)
     excluded = [path for path in changed if path not in declared_paths]
 
     scope = SCOPE_TEMPLATE.format(
         baseline=base,
         accepted=accepted,
+        accepted_patch_sha256=digest(accepted_patch),
+        expected_patch_sha256=digest(expected_patch),
         included=_yaml_block(
             "included", declared_paths, "TODO(agent): why this is recurring structure"
         ),
@@ -221,7 +219,9 @@ def execute(args: argparse.Namespace) -> int:
     print("Fixtures and patches are final. Still to author, by the agent:")
     print("  - templates/ for each step")
     print("  - parameters, preconditions and steps in capability.yaml")
-    print("  - the second case in examples/generalization/, for the developer to approve")
+    print(
+        "  - the second case in examples/generalization/, for the developer to approve"
+    )
     print("  - an incompatible tree in examples/refusal/before/")
     return 0
 

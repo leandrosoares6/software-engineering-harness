@@ -100,6 +100,12 @@ A candidate becomes a capability only if it clears all four:
 4. **Safe refusal** — an incompatible repository structure yields an explicit error, never a partial or
    adapted result.
 
+Preceding all four, and not one of them, is **provenance**: the declared structural claim is looked up in the
+commits `scope.yaml` names, so the reference the gates measure against is a fact about the repository rather
+than an assertion inside the package. A contradiction refuses the candidate before any gate runs. When the
+commits are no longer reachable the patches rest on their recorded digests, and that weaker state is reported
+rather than assumed. See [`CAPABILITY_MODEL.md`](CAPABILITY_MODEL.md) for both anchors.
+
 #### Deterministic mechanics
 
 Python AST nodes locate and validate source spans; they never rewrite source. Effects splice rendered text at
@@ -187,10 +193,15 @@ runtime and evidence policy remain roadmap capabilities; see `docs/ROADMAP.md`.
 4. **Deterministic or explicitly failed — never plausible.** Given the same capability, parameters, and
    compatible base state, an operation produces the same plan and patch over declared files or fails loudly.
    A capability whose structural anchor has drifted must not guess.
-5. **A candidate must clear all four gates — fidelity, generalization, idempotency, safe refusal.**
-   Reproducing its declared structural subset proves fidelity, not reuse: a capability that merely memorized
-   one case passes gate 1 and fails the product. A refused capability is better than one that emits
-   almost-correct code deterministically.
+5. **A candidate must clear all four gates — fidelity, generalization, idempotency, safe refusal — against a
+   reference anchored outside the package.** Reproducing its declared structural subset proves fidelity, not
+   reuse: a capability that merely memorized one case passes gate 1 and fails the product. A refused
+   capability is better than one that emits almost-correct code deterministically. And a gate is worth no more
+   than what it measures against: a package whose patches had been edited to fit its own templates once passed
+   all four, because containment compared two author-supplied files to each other and nothing else. Digests
+   recorded at capture plus recomputation of the structural claim from the declared commits are that anchor,
+   and which of the two applied is reported on every run so a weaker anchor is never mistaken for a stronger
+   one.
 6. **Capture is developer-confirmed.** Recurrence cannot be known from a single occurrence, so SEH never
    installs a capability on its own initiative — the agent may offer, the developer decides.
 7. SEH must install and operate without requiring any externally installed server. Third-party tools may be

@@ -6,6 +6,11 @@ Pre-registration for the first economic measurement. The contract it instantiate
 `manifest.yaml` is written **before** the runner that reads it and before any data is collected. That order
 is the point: a manifest produced alongside its results can be tuned to them.
 
+> **A correctness probe has already run**, ahead of the harness and outside this manifest. Both a documented
+> and an undocumented cold agent produced wiring byte-identical to the capability's output. See
+> [`PROBE_FINDINGS.md`](PROBE_FINDINGS.md). It burned task `t1-uninstall`, which must be replaced or its
+> contamination declared before the pilot collects anything.
+
 ## What this pilot can and cannot conclude
 
 It is an **instrumentation pilot**. Its job is to expose missing token fields, order effects, unstable

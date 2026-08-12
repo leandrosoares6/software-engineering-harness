@@ -118,7 +118,7 @@ treatments:
 
   arm_a_prime:
     procedure_description_path: procedure_description.md
-    procedure_description_sha256: REQUIRED-BEFORE-COLLECTION
+    procedure_description_sha256: 51bc423db379ed3a91ff94417c6f6d2956bd6ab901863be6f2808315a4d3a125
     author: REQUIRED-BEFORE-COLLECTION
     reviewer: REQUIRED-BEFORE-COLLECTION
     authoring_mode: independent

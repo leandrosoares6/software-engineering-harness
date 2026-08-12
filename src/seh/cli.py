@@ -58,6 +58,12 @@ def cmd_init(args: argparse.Namespace) -> int:
             json.dumps({"seh": "0.1", "repository": config.root.name}, indent=2) + "\n",
             encoding="utf-8",
         )
+    # Ignore this directory from inside it, so initializing SEH never dirties the
+    # working tree and never edits a file the developer owns. A dirty tree would
+    # otherwise block `capability capture`, which requires a provable baseline.
+    ignore_file = config.state_dir / ".gitignore"
+    if not ignore_file.exists():
+        ignore_file.write_text("*\n", encoding="utf-8")
     print(f"Initialized SEH at {config.state_dir}")
     return 0
 

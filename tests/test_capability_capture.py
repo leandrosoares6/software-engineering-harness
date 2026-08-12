@@ -228,6 +228,36 @@ def test_excluded_files_are_listed_rather_than_silently_dropped(
     assert baseline in scope
 
 
+def test_scope_is_valid_yaml_when_nothing_is_excluded(external_repo, tmp_path):
+    """Regression: an empty sequence must be inline, not a bare [] on its own line.
+
+    Found by running the README walkthrough, where the accepted change touched
+    only the declared file. Every unit test until then happened to exclude
+    something, so the empty branch was never rendered.
+    """
+    import yaml
+
+    baseline = git(external_repo, "rev-parse", "HEAD")
+    (external_repo / "app" / "registry.py").write_text(
+        ACCEPTED_REGISTRY, encoding="utf-8"
+    )
+    git(external_repo, "add", "-A")
+    git(external_repo, "commit", "-m", "only the declared file")
+
+    candidate, _, excluded = capture(
+        external_repo,
+        tmp_path / "out",
+        capability_id="app.add-registry-handler",
+        baseline=baseline,
+        declared=["app/registry.py"],
+    )
+
+    assert excluded == []
+    scope = yaml.safe_load((candidate / "examples/fidelity/scope.yaml").read_text())
+    assert scope["excluded"] == []
+    assert scope["included"][0]["path"] == "app/registry.py"
+
+
 def test_expected_patch_is_contained_in_accepted_patch(external_repo, tmp_path):
     """Containment holds by construction: one renderer, two file sets."""
     baseline = accept_change(external_repo)

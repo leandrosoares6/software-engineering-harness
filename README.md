@@ -10,6 +10,154 @@ SEH is a model-agnostic engineering harness designed to reduce unnecessary LLM u
 
 The first milestone intentionally contains **no LLM integration**. It proves the deterministic substrate first: Git-aware repository indexing, a structural graph, and queryable engineering context.
 
+## Try it in your project
+
+Requires Python 3.11+ and a Git repository with tracked Python sources.
+
+```bash
+pip install git+https://github.com/leandrosoares6/software-engineering-harness.git
+```
+
+### 1. Index the repository
+
+```bash
+cd /path/to/your-project
+seh init
+seh index
+```
+
+`init` creates local state under `.seh/`, which belongs in `.gitignore`. `index` parses Git-tracked Python
+with the standard-library `ast` module — no external parser, no language server.
+
+### 2. Ask where things are
+
+```bash
+seh inspect build_registry
+seh neighbors build_registry
+```
+
+```text
+function:be3617ef88619f5b8de0  function  app.registry.build_registry  app/registry.py:8
+```
+
+`inspect` lists every partial match with a stable node ID. `neighbors` answers only when the query is
+unambiguous; otherwise it prints the candidates so you can select one with `--id`. Neither command writes
+anything, and both refuse a stale index rather than serving outdated results.
+
+### 3. Teach the project a recurring procedure
+
+This is what makes SEH more than an indexer. The loop starts with **ordinary work**: implement the change
+yourself, or with your agent, exactly as you normally would. Only once it is accepted do you decide whether
+the *surrounding procedure* is worth keeping.
+
+Say adding a handler to `app/registry.py` always means the same two edits — a `handler_<name>` function, and
+one line registering it. Implement one, commit it, then capture the procedure:
+
+```bash
+seh capability capture \
+  --id app.add-registry-handler \
+  --baseline <commit-before-your-change> \
+  --file app/registry.py \
+  --output ./candidate
+```
+
+`capture` reads the `before` bytes from the baseline commit — never by subtracting from the current tree,
+because ordering and surrounding bytes are historical facts. It writes the fixtures, `accepted.patch`,
+`expected.patch`, and a `scope.yaml` listing what it treated as structure and what it excluded as behaviour.
+
+It deliberately stops there. `templates/`, `parameters` and `steps` are left as `TODO(agent)`, because
+separating structure from domain is a judgement call and SEH must not make it for you. Fill them in — this is
+where a coding agent earns its keep, having just written the code and knowing which parts carry meaning:
+
+```jinja
+{# candidate/templates/handler.py.tmpl #}
+def handler_{{ name }}() -> str:
+    return "{{ name }}"
+```
+
+```yaml
+# candidate/capability.yaml (excerpt)
+steps:
+  - uses: splice.after
+    with:
+      file: app/registry.py
+      locator: python.symbol
+      selector: last_with_prefix
+      prefix: handler_
+      template: templates/handler.py.tmpl
+```
+
+### 4. Prove it before trusting it
+
+```bash
+seh capability validate ./candidate --allow-verification
+```
+
+```text
+Capability app.add-registry-handler
+  PASS fidelity: patch and verification match
+  PASS generalization: patch and verification match
+  PASS idempotency: second application refused explicitly
+  PASS safe_refusal: no module-level function starting with 'handler_'
+```
+
+Four gates, all required. **Fidelity** rebuilds the change you already accepted. **Generalization** produces a
+second case with different parameters, which you approve — fidelity alone only proves memorization.
+**Idempotency** refuses a second application. **Safe refusal** errors out on an incompatible tree instead of
+adapting to it.
+
+Verification is denied by default. A candidate declares commands that SEH will execute, so review it — every
+command — before opting in with `--allow-verification`. Commands run with an argument vector, no shell, and a
+bounded timeout, but that is not an operating-system sandbox.
+
+### 5. Install and reuse
+
+```bash
+seh capability install ./candidate --allow-verification
+```
+
+The capability lands in `.seh-capabilities/`, which **is** version-controlled: learned procedure is explicit
+code and data, reviewable in a pull request and removable in one.
+
+From then on the procedure costs no inference:
+
+```bash
+seh capability run app.add-registry-handler --param name=status
+```
+
+```text
+Planned app.add-registry-handler v1 (1 file(s), nothing written)
+Operation de23077335fd1bb1...
+--- a/app/registry.py
++++ b/app/registry.py
+@@ -5,7 +5,12 @@
++def handler_status() -> str:
++    return "status"
+...
+Rerun with --apply --allow-verification to write and verify this patch.
+```
+
+`run` plans by default and writes nothing. Review the patch, then apply it:
+
+```bash
+seh capability run app.add-registry-handler --param name=status --apply --allow-verification
+```
+
+```text
+Applied app.add-registry-handler v1 to 1 file(s), verified, in 62ms
+```
+
+Inserted code adopts the surrounding style — indentation, separators and blank-line rhythm are read from the
+siblings already in the file — so the result is indistinguishable from hand-written code, and every byte
+outside the inserted fragment stays identical.
+
+### What SEH will not do
+
+It will not invent behaviour: a capability scaffolds and wires recurring structure, but the body of your new
+handler is still yours to write. It will not adapt to a repository it does not recognize — a drifted anchor
+is an explicit error, never a best guess. And it never calls a model: your agent does the reasoning, while
+SEH judges, executes and measures.
+
 ## Principles
 
 1. **Code before tokens.** If a task can be solved deterministically, do not ask an LLM.

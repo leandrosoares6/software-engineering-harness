@@ -54,9 +54,7 @@ SCOPE_TEMPLATE = """baseline:
   commit: {baseline}
 accepted:
   commit: {accepted}
-included:
-{included}excluded:
-{excluded}honesty_test:
+{included}{excluded}honesty_test:
   would_do_this_without_capture: "TODO(developer): yes/no, and why"
 """
 
@@ -88,13 +86,19 @@ def _yaml_scalar(value: str) -> str:
     return '"' + value.replace("\\", "\\\\").replace('"', '\\"') + '"'
 
 
-def _yaml_list(entries: list[str], reason: str) -> str:
+def _yaml_block(key: str, entries: list[str], reason: str) -> str:
+    """Render a key and its list, inline when empty.
+
+    An empty sequence must be `key: []` on one line; `key:` followed by a
+    bare `[]` underneath is not valid YAML.
+    """
     if not entries:
-        return "[]\n"
-    return "".join(
+        return f"{key}: []\n"
+    items = "".join(
         f"- path: {_yaml_scalar(entry)}\n  reason: {_yaml_scalar(reason)}\n"
         for entry in entries
     )
+    return f"{key}:\n{items}"
 
 
 def capture(
@@ -163,11 +167,11 @@ def capture(
     scope = SCOPE_TEMPLATE.format(
         baseline=base,
         accepted=accepted,
-        included=_yaml_list(
-            declared_paths, "TODO(agent): why this is recurring structure"
+        included=_yaml_block(
+            "included", declared_paths, "TODO(agent): why this is recurring structure"
         ),
-        excluded=_yaml_list(
-            excluded, "TODO(developer): why this is behavioural work"
+        excluded=_yaml_block(
+            "excluded", excluded, "TODO(developer): why this is behavioural work"
         ),
     )
 

@@ -26,8 +26,9 @@ seh init
 seh index
 ```
 
-`init` creates local state under `.seh/`, which belongs in `.gitignore`. `index` parses Git-tracked Python
-with the standard-library `ast` module — no external parser, no language server.
+`init` creates local state under `.seh/` and makes Git ignore it from the inside, so it never dirties your
+working tree and never edits a file you own. `index` parses Git-tracked Python with the standard-library
+`ast` module — no external parser, no language server.
 
 ### 2. Ask where things are
 
@@ -87,7 +88,27 @@ steps:
       template: templates/handler.py.tmpl
 ```
 
-### 4. Prove it before trusting it
+### 4. Review it, then prove it
+
+A candidate declares commands that SEH will execute on your machine, so read it
+before granting that permission:
+
+```bash
+seh capability show ./candidate
+```
+
+`show` prints the parameters, preconditions, steps, every template body, and —
+prominently — every command that would run, with its timeout. It executes
+nothing.
+
+```text
+Verification commands — these WILL execute with your privileges
+  $ python -m compileall -q app/registry.py
+    timeout 30s, expects exit 0
+  (no shell, argument vector only — this is not an OS sandbox)
+```
+
+Once you have read it:
 
 ```bash
 seh capability validate ./candidate --allow-verification
@@ -119,7 +140,16 @@ seh capability install ./candidate --allow-verification
 The capability lands in `.seh-capabilities/`, which **is** version-controlled: learned procedure is explicit
 code and data, reviewable in a pull request and removable in one.
 
-From then on the procedure costs no inference:
+From then on the procedure costs no inference. Check what the project has
+learned, then instantiate it:
+
+```bash
+seh capability list
+```
+
+```text
+app.add-registry-handler    v1  name
+```
 
 ```bash
 seh capability run app.add-registry-handler --param name=status
@@ -190,6 +220,9 @@ seh neighbors UserService
 seh neighbors --id class:0123456789abcdef0123
 seh capability validate ./candidate --allow-verification
 seh capability install ./candidate --allow-verification
+seh capability list
+seh capability show ./candidate
+seh capability capture --id app.x --baseline HEAD~1 --file app/registry.py --output ./candidate
 seh capability run seh.add-capability-subcommand --param name=report
 seh capability run seh.add-capability-subcommand --param name=report --apply --allow-verification
 ```

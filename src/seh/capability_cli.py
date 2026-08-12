@@ -39,6 +39,18 @@ def cmd_capture(args: argparse.Namespace) -> int:
     return execute(args)
 
 
+def cmd_list(args: argparse.Namespace) -> int:
+    from .capability_list import execute
+
+    return execute(args)
+
+
+def cmd_show(args: argparse.Namespace) -> int:
+    from .capability_show import execute
+
+    return execute(args)
+
+
 def configure_capability_parser(subcommands: argparse._SubParsersAction) -> None:
     capability_command = subcommands.add_parser(
         "capability", help="validate and manage deterministic project capabilities"
@@ -71,4 +83,12 @@ def configure_capability_parser(subcommands: argparse._SubParsersAction) -> None
     from .capability_capture import configure_parser as configure_capture_parser
 
     configure_capture_parser(capability_subcommands, cmd_capture)
+
+    from .capability_list import configure_parser as configure_list_parser
+
+    configure_list_parser(capability_subcommands, cmd_list)
+
+    from .capability_show import configure_parser as configure_show_parser
+
+    configure_show_parser(capability_subcommands, cmd_show)
     return None

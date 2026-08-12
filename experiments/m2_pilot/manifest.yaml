@@ -60,29 +60,37 @@ design:
   order_seed: REQUIRED-BEFORE-COLLECTION
   task_timeout_seconds: REQUIRED-BEFORE-COLLECTION
 
-# Each task adds one subcommand to the `capability` group. All five are wanted
-# by the project independently of this benchmark: `show` closes the review
-# affordance gap that `--allow-verification` currently leaves open, `list` is a
-# precondition for `run` being usable at all, `uninstall` supports the
+# Each task adds one subcommand to the `capability` group. All five are wanted by
+# the project independently of this benchmark: `uninstall` supports the
 # removability the capability model promises, `verify` is the seed of the M5 CI
-# health check, and `export` lets an installed capability be edited and
-# re-validated.
+# health check, `export` lets an installed capability be edited and re-validated,
+# `diff` is what an update flow needs when a project convention drifts, and
+# `applicable` implements the deterministic filter the capability model already
+# specifies but nothing yet provides.
+#
+# `show` and `list` were originally listed here and were removed on 2026-08-12.
+# Freezing them as benchmark tasks meant freezing two known usability gaps:
+# without `list` a developer cannot discover the id `run` requires, and without
+# `show` the `--allow-verification` trust decision demands a review the tool does
+# not support. External usability outranked keeping the original task set, so
+# they were implemented and replaced. The replacements pass the same test the
+# originals did: the project would build them regardless of this benchmark.
 tasks:
-  - id: t1-show
-    subcommand: show
-    intent: print a candidate's manifest, templates and declared commands without executing them
-  - id: t2-list
-    subcommand: list
-    intent: enumerate installed capabilities with id and version
-  - id: t3-uninstall
+  - id: t1-uninstall
     subcommand: uninstall
     intent: remove an installed capability from the catalogue
-  - id: t4-verify
+  - id: t2-verify
     subcommand: verify
     intent: re-run the four gates against an already-installed capability
-  - id: t5-export
+  - id: t3-export
     subcommand: export
     intent: write an installed capability back out as an editable candidate package
+  - id: t4-diff
+    subcommand: diff
+    intent: compare an installed capability against a candidate package
+  - id: t5-applicable
+    subcommand: applicable
+    intent: list installed capabilities whose preconditions hold against the current tree
 
 # Acceptance is executable. No model or human grades correctness.
 acceptance:
@@ -195,6 +203,11 @@ threats:
     Task leakage: the tasks are siblings of the `install` event the capability
     was captured from, so they are maximally favourable to it. Real recurring
     work is likely to be less uniform.
+  - >-
+    Task-set churn: `show` and `list` were replaced after being implemented. The
+    substitutes were chosen by the same criterion, but a task set that can be
+    revised is a task set that could be revised towards convenience. Any further
+    substitution must be recorded here with its reason before collection starts.
   - Selection is pre-resolved; Arm B is an upper bound, not an estimate.
   - The measured repository is the project measuring itself.
   - Authoring cost is unavailable, so no payback claim is possible.

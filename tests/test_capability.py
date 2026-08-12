@@ -654,3 +654,83 @@ def test_invalid_python_fixture_is_a_safe_refusal(tmp_path):
     gate = next(gate for gate in report.gates if gate.name == "safe_refusal")
     assert gate.passed
     assert "not valid UTF-8 Python" in gate.detail
+
+
+# --- text_line: the editorial residue inside mechanical wiring --------------
+#
+# This type exists because the POC capability was 7/8 derivable and blocked by a
+# single `help="show status"` fragment. Every refusal below is a value that would
+# either stop the rendered source from parsing, or keep it parsing with a meaning
+# the template does not show.
+
+
+def _with_text_line(candidate: Path, value: object) -> Path:
+    """Declare a `label` text_line, render it, and set it in the fidelity case."""
+    manifest = _manifest(candidate)
+    manifest["parameters"]["label"] = {"type": "text_line"}
+    _save_manifest(candidate, manifest)
+    registration = candidate / "templates" / "registration.py.tmpl"
+    registration.write_text(
+        REGISTRATION.replace(
+            'add_parser("{{ name }}")', 'add_parser("{{ name }}", help="{{ label }}")'
+        ),
+        encoding="utf-8",
+    )
+    case_path = candidate / "examples" / "fidelity" / "case.yaml"
+    case = yaml.safe_load(case_path.read_text())
+    case["parameters"]["label"] = value
+    case_path.write_text(yaml.safe_dump(case), encoding="utf-8")
+    return candidate
+
+
+@pytest.mark.parametrize(
+    "value,message",
+    [
+        ('say "hi"', "must not contain"),
+        ("don't", "must not contain"),
+        ("back\\slash", "must not contain"),
+        ("two\nlines", "control characters"),
+        ("tab\there", "control characters"),
+        ("  padded  ", "leading or trailing whitespace"),
+        ("{{ name }}", "template expression"),
+        ("", "non-empty"),
+        (7, "non-empty"),
+        ("x" * 201, "not a paragraph"),
+    ],
+)
+def test_text_line_refuses_values_that_could_carry_meaning(tmp_path, value, message):
+    candidate = _with_text_line(candidate_package(tmp_path), value)
+
+    gate = next(gate for gate in _validate(candidate).gates if gate.name == "fidelity")
+    assert not gate.passed
+    assert message in gate.detail
+
+
+def test_text_line_accepts_ordinary_prose(tmp_path):
+    """A label with spaces, punctuation and accents is exactly the intended case."""
+    candidate = _with_text_line(candidate_package(tmp_path), "show status (verbose)")
+    case = candidate / "examples" / "fidelity"
+    expected = (
+        (case / "expected.patch")
+        .read_text(encoding="utf-8")
+        .replace(
+            'add_parser("install")',
+            'add_parser("install", help="show status (verbose)")',
+        )
+    )
+    (case / "expected.patch").write_text(expected, encoding="utf-8")
+    (case / "accepted.patch").write_text(expected, encoding="utf-8")
+    record_scope_digests(case)
+
+    gate = next(gate for gate in _validate(candidate).gates if gate.name == "fidelity")
+    assert gate.passed, gate.detail
+
+
+def test_unknown_parameter_type_is_still_refused(tmp_path):
+    candidate = candidate_package(tmp_path)
+    manifest = _manifest(candidate)
+    manifest["parameters"]["blob"] = {"type": "string"}
+    _save_manifest(candidate, manifest)
+
+    with pytest.raises(CapabilityError, match="unsupported parameter type"):
+        _validate(candidate)

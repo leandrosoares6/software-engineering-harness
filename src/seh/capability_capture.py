@@ -16,9 +16,12 @@ id: {capability_id}
 version: 1
 
 # TODO(agent): declare the typed parameters this procedure varies by.
-# Only python_identifier is supported. Prose, argument lists and source code are
-# not parameters — behaviour that cannot be expressed here belongs in an ordinary
-# module the capability never touches.
+# Two types exist. `python_identifier` carries names. `text_line` carries one line
+# of prose sitting inside otherwise mechanical wiring — an argparse `help` string
+# is the motivating case — and refuses quotes, backslashes and control characters
+# rather than escaping them. Argument lists and source code are not parameters:
+# behaviour that cannot be expressed here belongs in an ordinary module the
+# capability never touches.
 parameters:
   name:
     type: python_identifier

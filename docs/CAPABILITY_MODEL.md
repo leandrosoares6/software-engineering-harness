@@ -80,6 +80,32 @@ at the time of the first change and exercise a second event before clearing the 
 MVP capabilities are **closed**: every variation required for replay must fit in declared, typed parameters.
 They do not accept model-generated source-code slots or callbacks.
 
+Two parameter types are admitted, and the second was added reluctantly.
+
+| type | carries | refuses |
+| --- | --- | --- |
+| `python_identifier` | a name Python itself constrains | non-identifiers and keywords |
+| `text_line` | one line of prose inside otherwise mechanical wiring | quotes, backslashes, control characters, template expressions, surrounding whitespace, over 200 characters |
+
+`text_line` exists because of a measured dead end. The POC capability's accepted change was seven-eighths
+derivable from a single identifier and blocked entirely by one fragment: `help="show status"`. Only three
+outcomes were available, and two were unacceptable. Narrowing the structural claim — which can only drop whole
+hunks — would have dropped the registration hunk and with it all the wiring, leaving a capability that adds a
+function nobody calls. Adjusting the fixture to match what the templates produce is exactly the fabrication the
+provenance anchors now refuse. So either the residue became expressible, or the procedure was not capturable at
+all.
+
+The distinction that keeps this consistent with rejecting free-form arguments: **this prose is not structure, it
+is a hole in the structure.** A `text_line` does not let SEH invent text; it lets the agent supply the one
+editorial fragment the procedure genuinely varies by, which is the intended division of labour. What was
+rejected, and stays rejected, is passing code, argument lists or callbacks as parameters.
+
+It refuses rather than escapes, and that is deliberate. A value is spliced into source verbatim, so the template
+must stay a literal picture of the emitted bytes; if SEH quoted values itself, a reviewer comparing a template
+against a patch could no longer see where the quotes came from. The cost is real and accepted: an apostrophe in
+help text is a refusal, not a transformation. Prose that cannot survive that is behaviour, and belongs in a
+module the capability never touches.
+
 An extension point would make two invocations of the same capability incur different inference cost depending
 on how the slot was filled. That is incompatible with the MVP measurement protocol, even though SEH itself
 would not call the model. If extension-bearing capabilities are ever introduced, they must be a separate

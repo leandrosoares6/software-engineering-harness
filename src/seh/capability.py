@@ -27,6 +27,25 @@ SCHEMA = "seh.capability.phase0/v0.1"
 MAX_FILE_BYTES = 1_048_576
 MAX_FIXTURE_FILES = 100
 SUPPORTED_STEPS = {"splice.after", "splice.before"}
+
+# `python_identifier` covers the structural half of a procedure: names that Python
+# itself constrains. `text_line` exists for the residue — a one-line editorial
+# fragment sitting inside otherwise mechanical wiring, such as an argparse `help`
+# string. Without it, a procedure that is 7/8 derivable is not capturable at all,
+# and the only alternatives are to fabricate the fixture or to drop the wiring.
+#
+# It admits text, never code. The value is spliced into source verbatim, and the
+# template stays a literal picture of the emitted bytes — which is why SEH refuses
+# quotes and backslashes rather than escaping them. A value that could change the
+# meaning of the surrounding literal is not a value this type carries; that is
+# behaviour, and belongs in a module the capability never touches.
+PARAMETER_TYPES = frozenset({"python_identifier", "text_line"})
+TEXT_LINE_MAX_CHARS = 200
+_TEXT_LINE_FORBIDDEN = {
+    '"': "a double quote would terminate the surrounding string literal",
+    "'": "a single quote would terminate the surrounding string literal",
+    "\\": "a backslash would introduce an escape SEH does not model",
+}
 _PLACEHOLDER = re.compile(r"{{\s*([A-Za-z_][A-Za-z0-9_]*)\s*}}")
 _CAPABILITY_ID = re.compile(r"[a-z0-9][a-z0-9._-]*\Z")
 _HUNK_HEADER = re.compile(r"^(@@ -\d+(?:,\d+)? \+\d+(?:,\d+)? @@)[^\r\n]*(\r?\n)?$")
@@ -266,9 +285,9 @@ def load_candidate(path: Path) -> Candidate:
             raise CapabilityError(f"invalid parameter name: {name!r}")
         spec = _mapping(raw_spec, f"parameters.{name}")
         _strict_keys(spec, {"type"}, f"parameters.{name}")
-        if spec.get("type") != "python_identifier":
+        if spec.get("type") not in PARAMETER_TYPES:
             raise CapabilityError(f"unsupported parameter type: {spec.get('type')!r}")
-        parameters[name] = "python_identifier"
+        parameters[name] = spec["type"]
     if not parameters:
         raise CapabilityError("candidate must declare at least one parameter")
 
@@ -331,6 +350,46 @@ def _validate_parameters(candidate: Candidate, values: dict[str, Any]) -> None:
             or keyword.iskeyword(value)
         ):
             raise CapabilityRefusal(f"parameter {name!r} must be a python_identifier")
+        if kind == "text_line":
+            _validate_text_line(name, value)
+
+
+def _validate_text_line(name: str, value: Any) -> None:
+    """Admit one line of prose, and refuse anything that could carry meaning.
+
+    Every refusal here is a case where the rendered source would either stop
+    parsing or keep parsing with a different meaning than the template shows. A
+    value is not made safe by escaping it: the template must remain a literal
+    picture of the emitted bytes, so an apostrophe in help text is a refusal and
+    not a transformation. Prose that cannot survive this is behaviour.
+    """
+    if not isinstance(value, str) or not value:
+        raise CapabilityRefusal(f"parameter {name!r} must be a non-empty text_line")
+    if len(value) > TEXT_LINE_MAX_CHARS:
+        raise CapabilityRefusal(
+            f"parameter {name!r} exceeds {TEXT_LINE_MAX_CHARS} characters; a text_line "
+            "is a label, not a paragraph"
+        )
+    for char, reason in _TEXT_LINE_FORBIDDEN.items():
+        if char in value:
+            raise CapabilityRefusal(
+                f"parameter {name!r} must not contain {char!r}: {reason}"
+            )
+    if "{{" in value or "}}" in value:
+        raise CapabilityRefusal(
+            f"parameter {name!r} must not contain a template expression"
+        )
+    control = next((char for char in value if char < " " or char == "\x7f"), None)
+    if control is not None:
+        raise CapabilityRefusal(
+            f"parameter {name!r} must be a single line without control characters "
+            f"(found {control!r})"
+        )
+    if value != value.strip():
+        raise CapabilityRefusal(
+            f"parameter {name!r} must not have leading or trailing whitespace; "
+            "surrounding bytes belong to the template, not the value"
+        )
 
 
 def _patch_hunks(patch: str, label: str) -> tuple[tuple[str, str], ...]:

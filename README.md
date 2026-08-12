@@ -211,19 +211,28 @@ SEH judges, executes and measures.
 
 ## Product vision
 
-SEH is the project's versioned procedural memory. A coding agent handles a new pattern once; when that
-pattern proves reusable, it can be crystallized as a deterministic capability. Instantiating that capability
-produces an operation the project can execute, verify, and measure without inference. The developer continues
-to work through natural-language prompts, while recurring engineering procedures progressively move out of
-the model's context and into reviewable project capabilities.
+**The active front is the Context Compiler** — see the
+[Context Compiler PRD](docs/CONTEXT_COMPILER_PRD.md). The unit of value is no longer the reusable edit; it is
+the repository's own knowledge, delivered in the right shape with verifiable origin.
 
-See [Target Scenario](docs/TARGET_SCENARIO.md) for the intended developer experience and the wiring-ratio
-rule that decides when a capability is worth capturing at all.
+### The capability machinery is superseded
 
-See [Product Scenario: A Python Project That Learns How It Is Built](docs/PRODUCT_SCENARIO.md) for the
-end-to-end developer experience and [SEH Capability Model](docs/CAPABILITY_MODEL.md) for the primitive,
-capability, and operation mechanics. The economic experiment is specified separately in the
-[M2 Measurement Protocol](docs/M2_MEASUREMENT_PROTOCOL.md).
+It is retained as evidence and is not being extended. It works and is covered by tests; what stopped it was a
+measurement. A field scan of a production repository found a genuine recurring procedure of exactly the shape
+capabilities target — and it recurred **three times in five months**, its mechanical share was **four lines out
+of 1242 insertions**, and the three primitives it would have needed do not exist. Break-even lands in years.
+
+That negative result is the strongest thing this project produced, and it is what justifies the pivot. The
+record is in [Phase 0 Findings](docs/PHASE0_FINDINGS.md) and §2 of the PRD — which is also explicit that the
+replacement hypothesis, *discovery is expensive*, is **not yet established**, and that a one-day experiment
+with a kill criterion comes before any code.
+
+One piece carried over intact: **provenance anchoring**. A context package reuses the same mechanism, so it
+knows which commit it describes and fails loudly instead of going stale.
+
+Read [Product Scenario](docs/PRODUCT_SCENARIO.md) and the [SEH Capability Model](docs/CAPABILITY_MODEL.md) as
+the record of that earlier design, and the [M2 Measurement Protocol](docs/M2_MEASUREMENT_PROTOCOL.md) as the
+experiment it never completed.
 
 ## Current CLI
 

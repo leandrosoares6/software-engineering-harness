@@ -1,0 +1,4 @@
+# The live working copy is a nested Git repository. Committing it would create a
+# gitlink pointing nowhere. Its full history is versioned as poc-cli-history.bundle
+# instead — see EVIDENCE.md to restore it.
+poc-cli/

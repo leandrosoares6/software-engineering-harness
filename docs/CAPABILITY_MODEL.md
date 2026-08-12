@@ -119,7 +119,7 @@ above, read alone, reads stronger than the evidence underneath it.
 | --- | --- |
 | Occurrences demanding it | one |
 | Recurrence observed | none |
-| Where | a POC written to exercise SEH, not a project doing its own work |
+| Where | a POC written to exercise SEH, not a project doing its own work — commits in [`experiments/poc-utilidade/EVIDENCE.md`](../experiments/poc-utilidade/EVIDENCE.md) |
 | The procedure it unblocked | adding a CLI command whose entire body is `print("<name>")` |
 | Checked against the north-star capability | no — whether `add-agent-tool` needs a text field was never established |
 

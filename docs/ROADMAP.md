@@ -1,5 +1,23 @@
 # Roadmap
 
+> ## ⚠ This roadmap is superseded
+>
+> **The active front is the Context Compiler** — [`CONTEXT_COMPILER_PRD.md`](CONTEXT_COMPILER_PRD.md).
+> Nothing below is being worked on, and **M3 is no longer "the product"**.
+>
+> What stopped it was a measurement, not a change of taste. A field scan of a production repository found a
+> genuine recurring procedure of exactly the shape M3 targets: it recurred **three times in five months**
+> across two authors, its mechanical share was **four lines out of 1242 insertions**, and the three primitives
+> it would have needed (`file.render`, `python.import_block`, `splice.into_collection`) do not exist.
+> Break-even lands in years. See §2 of the PRD and [`PHASE0_FINDINGS.md`](PHASE0_FINDINGS.md).
+>
+> Everything below is **retained as the record of that design**, not as a plan. M0 and M1 shipped and remain
+> the substrate the new front builds on; the provenance anchoring added late to M3 carried over intact and is
+> reused by the context package. M2's three-arm experiment was never run, and the one probe that touched it
+> was contaminated on the very variable in question.
+>
+> Read it as history. Do not resume it without re-deciding the positioning.
+
 > Positioning decided in `.claude/PRPs/prds/seh-runtime-evidencia-medicao.prd.md`.
 >
 > **SEH is the project's versioned procedural memory** — a codebase that learns how it is built. The agent
@@ -53,7 +71,7 @@ Implementation and experiment contract: [`M2_MEASUREMENT_PROTOCOL.md`](M2_MEASUR
 - [ ] measurement harness — **tokens and wall-clock latency** per task
 - [ ] three-arm A/A′/B benchmark on a reproducible POC project: baseline agent, documented procedure, SEH
 
-## M3 — `seh capability`: Procedural Memory *(the product)*
+## M3 — `seh capability`: Procedural Memory *(superseded — was the product)*
 - [x] **initial source-preservation spike**: proved AST→offset plus textual splice, executable scaffolding,
       idempotency, and safe refusal. It explored a wider vocabulary against the Java adapter, which was
       removed in the Python-only migration; the surviving lessons are recorded in

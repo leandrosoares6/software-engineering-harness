@@ -76,7 +76,9 @@ evidence and violate the same honesty rule the gates enforce.
 
 ### A gate is worth no more than the reference it measures against
 
-Found 2026-08-12, in a POC the developer built in a separate repository. That capability cleared all four
+Found 2026-08-12, in a POC the developer built in a separate repository. Its history is retained and
+restorable — see [`experiments/poc-utilidade/EVIDENCE.md`](../experiments/poc-utilidade/EVIDENCE.md), which
+names the commit that contradicts the fixture. That capability cleared all four
 gates while its fidelity case claimed the developer had accepted
 `add_parser("status", help="TODO")`. The accepted commit says `help="show status"`. Both patches had been
 edited to match what the templates could produce, and the check that should have caught it — every

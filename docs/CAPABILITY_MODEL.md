@@ -80,7 +80,8 @@ at the time of the first change and exercise a second event before clearing the 
 MVP capabilities are **closed**: every variation required for replay must fit in declared, typed parameters.
 They do not accept model-generated source-code slots or callbacks.
 
-Two parameter types are admitted, and the second was added reluctantly.
+Two parameter types are admitted. The second rests on weaker evidence than this model's own admission rule
+requires, and the threat below states that plainly rather than leaving it to be inferred from the argument.
 
 | type | carries | refuses |
 | --- | --- | --- |
@@ -105,6 +106,37 @@ must stay a literal picture of the emitted bytes; if SEH quoted values itself, a
 against a patch could no longer see where the quotes came from. The cost is real and accepted: an apostrophe in
 help text is a refusal, not a transformation. Prose that cannot survive that is behaviour, and belongs in a
 module the capability never touches.
+
+#### Declared threat: `text_line` was admitted on a single non-recurring occurrence
+
+Recorded 2026-08-12, at the time of admission rather than afterwards.
+
+The rule this model states for the primitive vocabulary is that something is admitted when **a real recurring
+procedure demands it — not to round out a vocabulary**. `text_line` does not meet that rule, and the argument
+above, read alone, reads stronger than the evidence underneath it.
+
+| | |
+| --- | --- |
+| Occurrences demanding it | one |
+| Recurrence observed | none |
+| Where | a POC written to exercise SEH, not a project doing its own work |
+| The procedure it unblocked | adding a CLI command whose entire body is `print("<name>")` |
+| Checked against the north-star capability | no — whether `add-agent-tool` needs a text field was never established |
+
+The reasoning was sound given the goal of making that capability honest, but the goal itself was shaped by the
+POC. A capability whose commands have no behaviour is a high wiring ratio over an empty denominator: it can
+neither confirm nor refute that the type is needed by work anyone would do anyway. This is the near neighbour of
+the finding already recorded twice in [`PHASE0_FINDINGS.md`](PHASE0_FINDINGS.md) — multiplicity in a snapshot is
+not recurrence, and structure in a snapshot is not structure the project intends to keep.
+
+**Resolution condition.** `text_line` is confirmed when a procedure that recurs in a repository doing its own
+work requires it, and that occurrence is recorded here. If the first such procedure does not require it, the
+type is removed rather than retained on the strength of already existing. Being implemented, tested and
+documented is not evidence; it is only sunk cost, and this section exists so that cost cannot quietly become the
+justification.
+
+Nothing built on `text_line` may be cited as evidence for it. In particular, the POC capability now passing four
+gates is a consequence of the admission, not support for it.
 
 An extension point would make two invocations of the same capability incur different inference cost depending
 on how the slot was filled. That is incompatible with the MVP measurement protocol, even though SEH itself
@@ -159,6 +191,10 @@ primitive with no implementation and no proof is worse than an absent one.
 A primitive is admitted when a real recurring procedure demands it — not to round out a vocabulary, and not
 to restore a deleted experiment. Creating a module merely to cover `file.render` would repeat the
 snapshot-multiplicity error in a new form. See [`PHASE0_FINDINGS.md`](PHASE0_FINDINGS.md).
+
+The parameter vocabulary is held to the same standard, and one entry currently fails it: `text_line` was
+admitted on a single non-recurring occurrence, under a declared threat with a resolution condition. A reader
+applying this rule should know the exception exists rather than discover it later.
 
 `src/seh/source_edit.py` is the sole implementation and the normative authority. `experiments/phase0/`
 preserves the prospective `install` → `run` capture that closed the technical gate; it holds fixtures and

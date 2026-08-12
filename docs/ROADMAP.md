@@ -45,6 +45,9 @@ Deliberately minimal: enough for evidence to reference `file:line:symbol` and fo
 structure directly, not an attempt to match Serena/Aider in indexing depth or language coverage.
 
 ## M2 — Deterministic Runtime, Evidence & Measurement
+
+Implementation and experiment contract: [`M2_MEASUREMENT_PROTOCOL.md`](M2_MEASUREMENT_PROTOCOL.md).
+
 - [ ] command runner (executes test/build/lint outside the model's context)
 - [ ] `pytest` output → structured evidence compressor
 - [ ] structured evidence model (reuses the provenance/fingerprint discipline built in PR #1)

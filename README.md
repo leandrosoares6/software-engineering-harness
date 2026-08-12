@@ -29,7 +29,8 @@ the model's context and into reviewable project capabilities.
 
 See [Product Scenario: A Python Project That Learns How It Is Built](docs/PRODUCT_SCENARIO.md) for the
 end-to-end developer experience and [SEH Capability Model](docs/CAPABILITY_MODEL.md) for the primitive,
-capability, and operation mechanics.
+capability, and operation mechanics. The economic experiment is specified separately in the
+[M2 Measurement Protocol](docs/M2_MEASUREMENT_PROTOCOL.md).
 
 ## Current CLI
 

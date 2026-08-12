@@ -173,7 +173,7 @@ O mínimo para validar a hipótese, em ordem de dependência:
 5. Um **runner + compressor** `pytest` → evidência, para verificar o replay.
 6. O **experimento baseline vs. SEH**, com capacidades instanciadas N vezes para medir a curva de payback.
 
-O ponto de falsificação mudou duas vezes. Não é mais "compressão gera delta?", nem apenas "em quantas repetições se paga?" — é primeiro **"um candidato passa nos quatro gates?"** (hipótese A, técnica, ainda em avaliação na Fase 0) e só depois a curva de payback (hipótese B, econômica). Ver a bifurcação de resultado em *Key Hypothesis*.
+O ponto de falsificação mudou duas vezes. Não é mais "compressão gera delta?", nem apenas "em quantas repetições se paga?" — é primeiro **"um candidato passa nos quatro gates?"** (hipótese A, técnica, confirmada na Fase 0 pelo evento `install` → `run`) e só depois a curva de payback (hipótese B, econômica). O protocolo desta segunda etapa está em [`docs/M2_MEASUREMENT_PROTOCOL.md`](../../../docs/M2_MEASUREMENT_PROTOCOL.md). Ver a bifurcação de resultado em *Key Hypothesis*.
 
 ### User Flow
 

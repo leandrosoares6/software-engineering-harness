@@ -155,7 +155,9 @@ tool output directly.
 Normalizes runtime outcomes into structured evidence for local recovery or frontier escalation, reusing the
 provenance/fingerprint discipline from `seh-graph` (confident evidence or an explicit error, never stale
 data served silently). Also owns token measurement: capturing input/output/cache consumption per agent
-session so the economics of `seh-runtime` are provable, not asserted.
+session so the economics of `seh-runtime` are provable, not asserted. The paired experiment, storage
+contract, metric formulas, and payback rules are defined in
+[`M2_MEASUREMENT_PROTOCOL.md`](M2_MEASUREMENT_PROTOCOL.md).
 
 ### seh-adapters
 Integrates external coding agents and language implementations without coupling them to SEH internals.

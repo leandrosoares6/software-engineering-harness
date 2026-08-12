@@ -485,17 +485,61 @@ Antes de escrever `seh compile`, responder a pergunta estrutural:
 
 > Um pacote de contexto feito à mão, com seed perfeito escolhido por um humano, reduz tool calls em relação ao agente usando apenas a documentação existente?
 
-Passos:
+O seed é escolhido a mão **de propósito**. Isso remove o Seed Resolver — o componente mais fraco e mais caro do PRD — do experimento, e o que sobra é o **melhor caso que o produto poderia alcançar**. Se o teto não compensa, nenhuma engenharia no resolver salva, porque o resolver só pode se aproximar desse teto, nunca ultrapassá-lo.
 
-1. Escolher uma tarefa real num repositório de trabalho com histórico suficiente — o da varredura de campo serve, e os controles de vazamento do §15 se aplicam aqui também: árvore no commit anterior ao alvo, para que o agente não possa ler a resposta.
-2. Montar `context.md` manualmente.
-3. Rodar duas sessões frias:
-   - Sessão A: agente com prompt + acesso raw ao repo.
-   - Sessão B: agente com prompt + `context.md` anexado.
-4. Medir tool calls até a primeira edição correta.
+#### Pré-registro
 
-**Se B não vencer A claramente, o projeto morre aqui sem código.**  
-**Se B vencer, sabemos o teto e podemos decidir quanto automatizar.**
+Tudo nesta subseção é fixado **antes** da primeira sessão. Um valor que mude depois invalida o experimento em vez de emendá-lo. É a mesma disciplina de `experiments/m2_pilot/manifest.yaml`, e existe pela mesma razão: depois do fato, um critério ajustado é indistinguível de um critério medido.
+
+#### Montagem
+
+1. Escolher um **commit-alvo resolvido** num repositório de trabalho com histórico suficiente. Preferir um que tenha adicionado ou alterado testes — a razão está no oráculo.
+2. Árvore no commit **anterior** ao alvo. O agente não pode alcançar o alvo nem nada posterior a ele: é o controle de vazamento do §15, e é assim que o probe da fase anterior se estragou.
+3. Prompt = **paráfrase** da mensagem do commit, escrita sem olhar o diff.
+4. Montar `context.md` a mão, com o seed que um humano sabe estar certo.
+5. Fixar o escopo: a tarefa é a mudança que o commit-alvo fez, e nada além. Refatoração adjacente não solicitada é registrada e **exclui a repetição** — no probe anterior um arm refatorou outro módulo de brinde, +97 linhas, e o delta virou mistura de dois efeitos.
+
+#### Arms e repetições
+
+| arm | tratamento |
+|---|---|
+| A | prompt + acesso raw ao repositório, com toda a documentação que ele já tem |
+| B | prompt + `context.md` anexado, mesmo acesso raw |
+
+`R = 3` sessões frias por arm, seis no total. A repetição não mede variância de tarefa — a tarefa é a mesma — e sim **não-determinismo do modelo**, que foi a fraqueza declarada do probe anterior (`n = 1` por arm, sem controle algum).
+
+#### O oráculo: quem decide que a edição está correta
+
+Executável, e decidido antes de rodar. Nenhum humano e nenhum modelo julga.
+
+**Critério primário — os testes do próprio commit-alvo.** Depois que o agente para, o harness copia para a árvore os arquivos de teste que o commit-alvo adicionou ou alterou, e os executa. A edição está correta quando eles passam, junto com a suíte pré-existente.
+
+Esses arquivos de teste **nunca ficam visíveis ao agente**: são gabarito, e vivem no futuro da árvore. Entram só depois que a sessão termina.
+
+**Critério de reserva**, quando o commit-alvo não trouxe teste: a suíte pré-existente passa **e** a edição toca o conjunto de arquivos que o commit tocou. É mais fraco, e a diferença é declarada no resultado em vez de dissolvida nele.
+
+#### A métrica
+
+**Tool calls até a primeira edição correta.** Conta toda invocação de ferramenta — leitura, busca, listagem, shell, edição — do início da sessão até a edição que satisfaz o oráculo, **incluindo as tentativas que falharam antes dela**. Tentativa falha é custo real e conta.
+
+Registrados mas não decisórios: arquivos distintos lidos, tokens, tempo de parede.
+
+#### O limiar, fixado agora
+
+"Vencer claramente" precisa de número, senão é lido depois do resultado.
+
+| mediana de B ÷ mediana de A | leitura |
+|---|---|
+| **≤ 50%** | vence. Segue para a Fase 1, sabendo o teto |
+| 50%–90% | inconclusivo. O ganho não paga 2–4 semanas *no melhor caso possível*; ou se amplia a amostra, ou se para |
+| **> 90%** | morto. O projeto termina aqui, sem código |
+
+Além da mediana, uma condição de piso: **nenhuma repetição de B pode ser pior que a mediana de A.** Um ganho que só aparece na média, com sessões piores no meio, não é o efeito que o produto promete.
+
+O corte em 50% não é arbitrário: é aproximadamente o que a prosa contaminada já entregou no probe anterior (54 → 27 tool calls). Um pacote com seed perfeito, montado a mão, precisa bater isso para justificar construir o resolver.
+
+**Se B não vencer, o projeto morre aqui sem uma linha de código.**  
+**Se B vencer, o número é o teto — e quanto automatizar passa a ser decisão econômica em vez de fé.**
 
 ### Fase 1 — Seed Resolver e Context Compiler (2–4 semanas)
 

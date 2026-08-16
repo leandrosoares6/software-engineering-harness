@@ -10,6 +10,10 @@ SEH is a model-agnostic engineering harness designed to reduce unnecessary LLM u
 
 The first milestone intentionally contains **no LLM integration**. It proves the deterministic substrate first: Git-aware repository indexing, a structural graph, and queryable engineering context.
 
+> **New to the project, or returning to it?** [`docs/COMO_FUNCIONA.md`](docs/COMO_FUNCIONA.md)
+> (Portuguese) tells the whole thing as a usage scenario with no project vocabulary at all, and
+> decodes the terms the rest of `docs/` uses.
+
 ## Try it in your project
 
 Requires Python 3.11+ and a Git repository with tracked Python sources.
@@ -214,6 +218,19 @@ SEH judges, executes and measures.
 **The active front is the Context Compiler** — see the
 [Context Compiler PRD](docs/CONTEXT_COMPILER_PRD.md). The unit of value is no longer the reusable edit; it is
 the repository's own knowledge, delivered in the right shape with verifiable origin.
+
+Its first gate is closed and positive. A pre-registered six-session experiment took an agent from a
+median of **52 tool calls to 16** on a real cross-layer localization task, against a threshold of
+≤50% fixed before the first run — and all six sessions converged on the same solution, so what the
+package bought was the *path* to the answer rather than the answer. Three limits are declared in
+[the result](experiments/fase0/RESULT.md) and travel with the number: the package was hand-built by
+the person who formed the hypothesis, so **this is the ceiling, not the product**; the oracle is
+localization, not correctness; and it is one task in one repository.
+
+Two questions remain open, and either can still end it: whether a repository's changes recur in the
+same *region* often enough for accumulated path records to pay
+([Phase 0.5](experiments/region_recurrence/README.md), an afternoon, pre-registered and not yet
+run), and whether a deterministic resolver recovers any of the ceiling (Phase 1, §16 of the PRD).
 
 ### The capability machinery is superseded
 

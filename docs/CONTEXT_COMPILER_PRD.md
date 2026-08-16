@@ -1,10 +1,27 @@
-# PRD — SEH Context Compiler v0.2
+# PRD — SEH Context Compiler v0.3
 
 **Status:** Draft  
-**Versão:** 0.2  
+**Versão:** 0.3  
 **Base:** Software Engineering Harness (SEH) v0.1.0a3  
 **Tipo:** pivot de produto  
-**Última revisão:** após crítica de v0.1
+**Última revisão:** após o resultado da Fase 0
+
+> **Leitura em linguagem simples:** [`COMO_FUNCIONA.md`](COMO_FUNCIONA.md) conta o mesmo produto
+> como cenário de uso, sem nenhum termo deste documento, e traz um decoder do vocabulário. Comece
+> por lá se estiver voltando ao projeto depois de um tempo.
+
+### O que mudou da v0.2 para a v0.3
+
+1. **§2 foi refeito.** A Fase 0 rodou. "Descoberta é cara" saiu de *suspeitado* para *medido*, com
+   o teto quantificado, e o §2 estava dizendo o contrário.
+2. **§22 é novo:** registros de caminho. O corpus do Seed Resolver deixa de ser o histórico Git
+   bruto e passa a ser um conjunto de registros compilados a partir de trabalho aceito. É a
+   hipótese de reforço, na forma barata.
+3. **§16 ganhou a Fase 0.5**, que mede se registros têm oportunidade suficiente para existir. A
+   Fase 1 fica condicionada a ela.
+
+O §2 continua sendo onde `README.md` e `ROADMAP.md` apontam para o resultado negativo de campo, e
+esse trecho não mudou de lugar.
 
 ---
 
@@ -20,9 +37,9 @@ O LLM recebe o pacote e parte direto para raciocinar, sem redescobrir o reposit�
 
 ---
 
-## 2. O que foi medido, e o que apenas se suspeita
+## 2. O que foi medido, e o que continua em aberto
 
-As duas coisas ficam separadas de propósito. A versão anterior desta seção as juntou, e o resultado leu mais forte do que a evidência sustenta.
+As duas coisas ficam separadas de propósito. A v0.1 desta seção as juntou, e o resultado leu mais forte do que a evidência sustentava. A v0.3 mantém a separação com uma mudança: o bloco que era "suspeitado" virou medido, e o que ocupa o lugar dele agora é outra pergunta.
 
 ### Medido, e o sinal é negativo
 
@@ -34,27 +51,37 @@ O POC anterior chegou ao mesmo lugar por outro eixo — ~15 min de autoria contr
 
 Este é o resultado mais sólido que o projeto produziu, e é negativo. É o que justifica abandonar o produto anterior.
 
-### Suspeitado, sem medição limpa
+### Medido, e o sinal é positivo
 
-**Descoberta parece ser cara. Isso não está estabelecido.**
+**Descoberta é cara, e o pacote de contexto compra o caminho até a solução.**
 
-O probe registrou 54 → 27 tool calls e 123k → 96k tokens entre um agente sem tratamento e um agente recebendo a descrição do procedimento. O delta **não é atribuível** ao tratamento, e `PROBE_FINDINGS.md` declara três razões:
+A Fase 0 (§16) rodou com pré-registro comitado antes da primeira sessão. Seis sessões frias, três por arm, numa tarefa real de localização entre camadas, em repositório bem documentado.
 
-- o agente do Arm A **encontrou e usou o pacote da capacidade** como documentação, então também tinha a convenção — não era um baseline sem documentação;
-- o escopo diferiu: o Arm A ainda refatorou outro módulo, +97 linhas;
-- n = 1 por arm, sem controle de não-determinismo do modelo.
+| métrica | mediana A | mediana B | B/A |
+|---|---|---|---|
+| tool_uses | 52 | 16 | **30,8%** |
+| tokens | 146.332 | 65.126 | 44,5% |
+| segundos | 521 | 166 | 31,9% |
 
-O que resta é observação estrutural, não medida: no repositório de campo, o registry tem 607 linhas e os três pontos de edição ficam dentro de uma única função, na linha 515. Isso torna "caro" **plausível**. Não o mede.
+Limiar pré-registrado `≤ 50%`: satisfeito. Piso — nenhuma repetição de B pior que a mediana de A: satisfeito. Oráculo de localização 6/6, não-regressão 6/6.
 
-### Por que mirar aí de qualquer forma
+O achado qualitativo vale mais que a razão: **os seis agentes convergiram para a mesma solução.** O pacote não comprou *correção*, comprou o **caminho até ela** — que é exatamente o que o §3 alega, e agora tem medição em vez de argumento.
 
-Três razões, e a terceira é a que decide:
+Três limites, declarados no próprio resultado e não negociáveis ao citá-lo: o `context.md` foi montado à mão por quem formulou a hipótese, então **isto é o teto, não o produto**; o oráculo é localização, não correção; e é uma tarefa, um repositório, `R = 3` — probe, não benchmark.
 
-1. é a única hipótese que sobra depois do resultado negativo;
-2. é consistente com tudo que foi observado, inclusive com o agente que preferiu o pacote da capacidade ao resto do repositório;
-3. **testá-la custa um dia** (§16, Fase 0), contra as semanas que o produto anterior consumiu antes de falhar.
+Registro completo em [`../experiments/fase0/RESULT.md`](../experiments/fase0/RESULT.md). O probe anterior, contaminado nas três formas que `PROBE_FINDINGS.md` declara, foi substituído por este e não deve mais ser citado.
 
-O erro anterior não foi escolher a hipótese errada. Foi construir semanas antes de testá-la.
+### Não medido, e é onde o produto ainda morre
+
+Duas perguntas em aberto, em ordem de custo para responder.
+
+**1. Recorrência de região — uma tarde.** O teto acima pressupõe que exista de onde tirar o seed. O resultado negativo mediu *identidade de procedimento* e a achou rara; um registro de caminho (§22) precisa de algo mais fraco — que a mudança nova caia numa região que alguma mudança anterior já visitou. Esse eixo nunca foi medido, e o número que matou as capabilities **não transfere** para ele. Fase 0.5, com limiares já fixados em [`../experiments/region_recurrence/README.md`](../experiments/region_recurrence/README.md).
+
+**2. Recuperação — 2 a 4 semanas.** Achar o registro certo a partir do prompt é o Seed Resolver (§10), e ele foi contornado de propósito na Fase 0. O teto é 30,8%; quanto disso um mecanismo determinístico captura é a Fase 1.
+
+### A regra que sobrevive às três
+
+O erro do produto anterior não foi escolher a hipótese errada. Foi construir semanas antes de testá-la. A Fase 0 custou um dia e devolveu um teto; a Fase 0.5 custa uma tarde. Nenhuma das duas exigiu código de produto, e essa é a ordem a manter.
 
 ---
 
@@ -135,14 +162,24 @@ Isso não exige LLM nem embeddings. Exige:
 
 ## 7. Arquitetura mínima
 
+Dois fluxos, e o de cima é o que a v0.3 acrescenta.
+
 ```text
+        ┌─────────── acumulação, sem inferência (§22) ───────────┐
+        │                                                        │
+   commit aceito ──► compilador de registro ──► .seh-records/    │
+        │            (diff → arquivos → símbolos)                │
+        └────────────────────────────┬───────────────────────────┘
+                                     │  corpus
+                                     ▼
 Developer Prompt
        │
        ▼
 ┌──────────────────────────┐
 │  Seed Resolver           │
 │  ├── symbol/file match   │
-│  └── git-history match   │  ← mecanismo principal
+│  ├── record match        │  ← mecanismo principal na v0.3
+│  └── git-history match   │  ← fallback, era o principal na v0.2
 └────────────┬─────────────┘
              │
              ▼
@@ -176,10 +213,12 @@ Developer Prompt
 
 ### Novos componentes
 
-- `seh.context.seed_resolver` → symbol/file match + git-history match.
+- `seh.records.compiler` → commit aceito → registro de caminho (§22). Sem inferência.
+- `seh.context.seed_resolver` → symbol/file match + record match + git-history match.
 - `seh.context.expander` → BFS limitada no grafo.
 - `seh.context.renderer` → Markdown estruturado.
 - `seh compile` → novo comando CLI.
+- `seh record` → compila o registro do commit aceito; idempotente, chamável de hook.
 
 ---
 
@@ -258,6 +297,16 @@ O formato é Markdown porque é legível por humanos e LLMs, não exige adapters
 ---
 
 ## 10. Seed Resolver
+
+> **Revisão da v0.3.** O corpus deste componente muda. A v0.2 casava o prompt contra 654 mensagens
+> de commit brutas; a v0.3 casa primeiro contra os registros de caminho do §22, que já declaram sua
+> região como fato do diff e vêm rotulados em linguagem de domínio. O §10.2 abaixo continua válido
+> e vira o **fallback** para o período em que o repositório ainda não acumulou registros —
+> inclusive o primeiro dia, quando não há nenhum.
+>
+> O mecanismo não fica mais fácil por decreto: casar português com português continua sendo
+> matching lexical sobre texto curto. O que melhora é o material — menos entradas, cada uma com
+> região declarada em vez de inferida por "arquivos daquele commit".
 
 ### 10.1 Symbol/File Match (caso fácil)
 
@@ -552,16 +601,72 @@ O corte em 50% não é arbitrário: é aproximadamente o que a prosa contaminada
 **Se B não vencer, o projeto morre aqui sem uma linha de código.**  
 **Se B vencer, o número é o teto — e quanto automatizar passa a ser decisão econômica em vez de fé.**
 
+#### Resultado: **B venceu**, `B/A = 30,8%`
+
+Fechada. Números, cobertura, e os **dois desvios declarados** — a métrica pré-registrada não foi
+medível como especificada, e os hooks do harness inflam a contagem em modo comum — estão em
+[`../experiments/fase0/RESULT.md`](../experiments/fase0/RESULT.md). O §2 resume; o RESULT decide.
+
+A lição transferível do desvio vale para toda fase seguinte: **se for medir agentes, não peça que
+eles se contem.** A telemetria do harness subnotificou até 44% num arm e 0% em outro — viés
+diferencial, na direção que favoreceria o resultado desejado.
+
+### Fase 0.5 — Recorrência de região (uma tarde)
+
+Nova na v0.3, e vem **antes** da Fase 1 porque decide se a Fase 1 tem do que se alimentar.
+
+A Fase 0 estabeleceu o teto de **valor** com seed perfeito montado à mão. Falta o teto de
+**frequência**: com que frequência a oportunidade sequer existe, ou seja, quantas mudanças caem em
+região que alguma mudança anterior já visitou (§22).
+
+Pré-registro completo, com limiares, cooldown decisório, nulls e vieses de direção declarada:
+[`../experiments/region_recurrence/README.md`](../experiments/region_recurrence/README.md).
+
+```bash
+python experiments/region_recurrence/measure.py \
+  --repo /caminho/do/repo-de-campo --cooldown-days 30 --json resultado.json
+```
+
+Os três desfechos possíveis já estão escritos, e um deles **não** é a Fase 1:
+
+| desfecho | consequência |
+|---|---|
+| recorrência frequente, e vence o null de arquivos quentes | funda a Fase 1 abaixo |
+| recorrência frequente, mas **não** vence o null | o produto é uma lista estática de arquivos quentes, custa uma tarde, e a Fase 1 é cancelada |
+| recorrência rara | registros não pagam. Mesmo veredito das capabilities, e pelo mesmo motivo |
+
 ### Fase 1 — Seed Resolver e Context Compiler (2–4 semanas)
 
-- [ ] Índice de mensagens de commit → arquivos, **truncável por commit-alvo** (§15).
-- [ ] Seed Resolver (symbol/file + git-history).
+**Condicionada à Fase 0.5.** Não iniciar antes do número.
+
+- [ ] `seh record` — compilador de registro de caminho (§22), sem inferência no caminho.
+- [ ] Índice de registros → região, **truncável por commit-alvo** (§15).
+- [ ] Índice de mensagens de commit → arquivos, mesma truncabilidade — fallback do §10.2 para
+      repositório sem registros acumulados.
+- [ ] Seed Resolver (symbol/file + record match + git-history).
 - [ ] Graph Expander pelas arestas existentes + referência de nome (§11).
 - [ ] Renderer Markdown.
-- [ ] Proveniência no pacote.
+- [ ] Proveniência no pacote e no registro.
 - [ ] Benchmark com 20 commits resolvidos, com os dois controles de vazamento.
 
 Fora desta fase, e explicitamente: grafo de chamadas Python (§11).
+
+#### O limiar da Fase 1, fixado agora
+
+Fixado aqui pelo mesmo motivo que o da Fase 0: depois do fato, um critério ajustado é
+indistinguível de um critério medido.
+
+A Fase 0 entregou `B/A = 30,8%` com seed humano. A Fase 1 roda **a mesma tarefa, o mesmo oráculo de
+localização, a mesma telemetria**, trocando o `context.md` montado à mão pelo pacote que o
+`seh compile` gerar sozinho, sem `--seed`.
+
+| fração do teto capturada | leitura |
+|---|---|
+| **`B'/A ≤ 50%`** | vence. O resolver captura o essencial; segue para a Fase 2 |
+| `50% < B'/A ≤ 75%` | inconclusivo. Reavaliar contra a lista estática de arquivos quentes, que é muito mais barata |
+| **`B'/A > 75%`** | o resolver não recupera o teto. O produto é o `context.md` manual como convenção de time, não uma ferramenta |
+
+Piso, herdado da Fase 0: nenhuma repetição de B′ pior que a mediana de A. `R = 3` no mínimo.
 
 ### Fase 2 — Refinamentos (4–6 semanas)
 
@@ -580,11 +685,19 @@ Fora desta fase, e explicitamente: grafo de chamadas Python (§11).
 
 ## 17. Riscos e objeções
 
-### Risco 1: O agente já é adaptativo
+### Risco 1: O agente já é adaptativo — **resolvido, a favor**
 
-O agente faz grep, lê, e decide o próximo grep sabendo mais. Um pacote pré-compilado é um chute único. Não sabemos se um chute bom é melhor que muitos chutes adaptativos.
+O agente faz grep, lê, e decide o próximo grep sabendo mais. Um pacote pré-compilado é um chute único. Não sabíamos se um chute bom é melhor que muitos chutes adaptativos.
 
-**Mitigação:** Fase 0 testa isso antes de qualquer código.
+**Resultado:** é. Na Fase 0, o chute único bom venceu a exploração adaptativa por ~3× em tool calls, e os dois arms chegaram na mesma solução.
+
+**O que continua valendo do risco:** o chute foi *humano e perfeito*. O risco não some, migra — vira o Risco 5.
+
+### Risco 5: O chute automático pode não ser bom
+
+O que a Fase 0 mostrou é que um seed certo compensa. Um seed **errado** entregue com a mesma confiança é pior que nenhum, porque o agente começa convicto no lugar errado.
+
+**Mitigação:** as três contenções do §22.6, e o limiar da Fase 1 fixado no §16 — que inclui um desfecho em que o produto é cancelado em favor de uma lista estática de arquivos quentes.
 
 ### Risco 2: Histórico Git pode ser ruído
 
@@ -642,3 +755,132 @@ Aider, Cursor, Copilot, Cody já fazem context intelligence.
 > **O coding agent deve começar a raciocinar no momento em que o contexto relevante já está organizado à sua frente, ancorado na árvore correta do repositório.**
 
 A unidade de valor deixa de ser a *edição reutilizável* e passa a ser o *conhecimento do repositório entregue no formato certo, com origem verificável*.
+
+---
+
+## 22. Registros de caminho
+
+Novo na v0.3. É a hipótese de reforço — o repositório aprende com a própria manutenção — na única
+forma que a medição de campo permite.
+
+### 22.1 O que é
+
+Um **registro de caminho** é a anotação de que um trabalho aceito tocou uma região do repositório:
+quais arquivos, quais símbolos, sob qual rótulo em linguagem de domínio, ancorado em qual commit.
+
+O que ele **não** é: uma receita. A versão anterior do projeto tentava guardar como a mudança foi
+feita e falhou economicamente (§2). Um registro guarda apenas **onde**.
+
+### 22.2 Por que "onde" paga e "como" não
+
+A distinção é a razão de a v0.3 existir, e é medível:
+
+| | capability (morta) | registro de caminho |
+|---|---|---|
+| condição de reuso | **identidade de procedimento** — o mesmo wiring recorre | **sobreposição de região** — a mudança nova cai perto |
+| frequência observada | 3 eventos em 5 meses | não medido → Fase 0.5 |
+| custo de autoria | dias: 4 gates, primitivos, fixtures, aprovação | uma travessia de diff |
+| quem escreve | agente propõe, desenvolvedor confirma | ninguém — é compilado |
+
+O número que matou as capabilities mediu a primeira linha. **Ele não transfere para a segunda**, e
+supor que transfere seria o mesmo erro do §11: ler uma medida de um eixo e concluir sobre outro.
+
+### 22.3 Compilado, não escrito
+
+Nenhum LLM no caminho de autoria, nenhum passo de confirmação, nenhum custo por unidade aprendida.
+O registro é uma projeção determinística de algo que o Git já guardou:
+
+1. **arquivos** — `git diff --name-only` do commit aceito;
+2. **símbolos** — linhas do diff atribuídas a declarações do índice;
+3. **rótulo** — o assunto do commit, que já está em linguagem de domínio (§5).
+
+Isso é o que torna o loop de reforço viável. Uma capability custava dias por unidade; um registro
+custa uma travessia de diff. Se a Fase 0.5 mostrar oportunidade, o payback não depende de o
+desenvolvedor lembrar de nada.
+
+#### A limitação que o índice impõe hoje, verificada e não suposta
+
+`Node.line` (`models.py:32`) guarda a **linha inicial** da declaração. `python_adapter.py` lê
+`statement.lineno` e **não** captura `end_lineno`, embora o `ast` o ofereça desde a 3.8.
+
+Consequência: atribuir uma linha do diff a um símbolo só pode ser feito por **declaração
+imediatamente anterior**, e isso erra em dois casos reais — mudança em código de nível de módulo
+depois da última função, e mudança em decorator antes da declaração seguinte.
+
+Duas saídas, e a primeira é barata: capturar `end_lineno` no adapter, um campo, e a atribuição
+passa a ser exata por contenção de span. Fica como item da Fase 1. Enquanto não existir, o registro
+declara `attribution: nearest_preceding` e o `included_because` diz isso ao consumidor, pelo mesmo
+motivo que o §11 faz com referência de nome: **nenhum consumidor deve ler mais do que o dado
+sustenta.**
+
+### 22.4 Formato
+
+`.seh-records/<commit-curto>.yaml`, versionado no Git — aprendizado é código e dado revisável e
+removível num PR, invariante herdado do modelo anterior.
+
+```yaml
+schema: seh.record/v0.1
+commit: 91bd721c4f...
+tree: 7b3e9a2f...
+subject: "Adiciona cupom de desconto no checkout"
+recorded_at: "2026-01-14T10:22:00Z"
+attribution: nearest_preceding
+region:
+  - path: api/checkout/pricing.py
+    symbols: [apply_discounts]
+    lines_changed: 34
+  - path: api/promotions/models.py
+    symbols: [Coupon, CouponRule]
+    lines_changed: 121
+  - path: tests/test_pricing.py
+    symbols: [test_discount_applied]
+    lines_changed: 32
+```
+
+Identificadores sintéticos, como no §9.
+
+### 22.5 O loop
+
+```text
+merge  ──►  seh record  ──►  .seh-records/91bd721c.yaml
+                                      │
+prompt ──►  seh compile  ◄────────────┘
+                │
+                ▼
+          context.md (§9)
+```
+
+`seh record` é idempotente e chamável de hook. Um registro nunca é sobrescrito: um commit é fato
+histórico, e reescrevê-lo repetiria o defeito que o `PHASE0_FINDINGS.md` registra em
+*"capture must preserve the true before-state"*.
+
+### 22.6 Os dois modos de falha, e as contenções
+
+**Registro errado recuperado com confiança.** É o risco que o M5 do roadmap antigo já nomeia para o
+catálogo de capabilities, e aqui é pior: um seed errado é pior que nenhum seed, porque o agente
+começa convicto no lugar errado. Três contenções, todas já presentes em forma no projeto:
+
+1. **O pacote nunca substitui o repositório.** O Arm B da Fase 0 tinha `context.md` **mais** acesso
+   raw, e foi *isso* que mediu 30,8%. Nenhuma versão do produto pode fechar o acesso ao código.
+2. **`Unknowns` (§9) é obrigatório**, não decorativo. Termo do prompt que não casou é impresso.
+3. **Cada registro carrega o quanto historicamente acertou.** O pacote diz o quanto confiar, em vez
+   de apresentar tudo com o mesmo peso.
+
+**Apodrecimento silencioso.** A proveniência (§13) resolve o caso duro — arquivo sumiu, árvore
+mudou, falha alto. Ela não pega o caso mole: o arquivo existe, mas a convenção mudou. Contenção
+barata: registro cuja região não é tocada há N meses é **rebaixado, não apagado**. A versão cara é
+health check em CI, e não deve ser construída antes de rot ser observado.
+
+### 22.7 O que este design pressupõe, e que ainda não foi medido
+
+Declarado aqui para que nenhuma seção posterior o trate como estabelecido:
+
+- **que a oportunidade existe** — Fase 0.5, não rodada;
+- **que a recuperação funciona** — Fase 1, não rodada. O máximo sobre todos os registros é um
+  oráculo; achar o registro certo a partir do prompt é outro problema;
+- **que sobreposição de região implica sobreposição de conhecimento.** Dois commits podem tocar o
+  mesmo arquivo por razões sem relação. É a mesma limitação que o oráculo de localização da Fase 0
+  declarou: mede o lugar, não o conteúdo.
+
+Se a Fase 0.5 voltar negativa, esta seção inteira é retida como registro de design e não é
+implementada — mesmo tratamento que o `CAPABILITY_MODEL.md` recebeu.

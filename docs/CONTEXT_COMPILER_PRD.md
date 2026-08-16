@@ -10,6 +10,27 @@
 > como cenário de uso, sem nenhum termo deste documento, e traz um decoder do vocabulário. Comece
 > por lá se estiver voltando ao projeto depois de um tempo.
 
+> ## ⚠ O §10.2 foi refutado. Não construa a Fase 1.
+>
+> O mecanismo principal deste PRD — recuperar o seed casando termos do prompt contra mensagens de
+> commit — **não funciona**, medido em três repositórios open source com pré-registro comitado
+> antes do script existir:
+> [`../experiments/seed_retrieval/RESULT.md`](../experiments/seed_retrieval/RESULT.md).
+>
+> Na classe que justifica o produto — pedido cujos termos **não** aparecem nos caminhos dos
+> arquivos, o caso do §5 — a captura foi **0,10 / 0,00 / 0,00** contra um corte pré-registrado de
+> 0,30, e a margem sobre "olhe os últimos 5 commits" foi de 9,5 pp contra 15 pp exigidos. Na classe
+> em que o termo já aparece no caminho, os três deram **0,25 idêntico** — que é `grep`.
+>
+> E o corte é sobre o teto: o prompt usado foi o assunto literal do commit-alvo.
+>
+> **O que continua de pé:** o resultado da Fase 0. Um pacote de contexto *correto* corta exploração
+> em ~3×. O valor existe; o que não existe é rota determinística barata até ele.
+>
+> **A única reversão possível** é o repositório de campo, cuja propriedade central — assunto em
+> português na linguagem do negócio — é fraca nos três open source. A previsão está registrada e o
+> teste é um comando. Até ele rodar, nada abaixo deve ser implementado.
+
 ### O que mudou da v0.2 para a v0.3
 
 1. **§2 foi refeito.** A Fase 0 rodou. "Descoberta é cara" saiu de *suspeitado* para *medido*, com
@@ -71,13 +92,29 @@ Três limites, declarados no próprio resultado e não negociáveis ao citá-lo:
 
 Registro completo em [`../experiments/fase0/RESULT.md`](../experiments/fase0/RESULT.md). O probe anterior, contaminado nas três formas que `PROBE_FINDINGS.md` declara, foi substituído por este e não deve mais ser citado.
 
+### Medido, e o sinal é negativo — o mecanismo principal
+
+**A recuperação do seed pelo texto do pedido não funciona.**
+
+Medido em gitea, scikit-learn e home-assistant, com pré-registro comitado antes do script existir.
+Na classe difícil — pedido cujos termos não aparecem nos caminhos, que é o caso do §5 — a captura
+do top-5 sobre o oráculo foi **0,10 / 0,00 / 0,00**, contra corte pré-registrado de 0,30 e margem
+exigida de 15 pp sobre "olhe os últimos 5 commits". Na classe fácil os três deram **0,25 idêntico**,
+que é a assinatura de `grep`.
+
+A oportunidade não é o problema: o oráculo na mesma classe é 0,40–0,50. O texto do pedido é que não
+acha qual anterior importa.
+
+Registro: [`../experiments/seed_retrieval/RESULT.md`](../experiments/seed_retrieval/RESULT.md).
+
 ### Não medido, e é onde o produto ainda morre
 
-Duas perguntas em aberto, em ordem de custo para responder.
+Uma pergunta em aberto — a segunda foi respondida acima, e negativamente.
 
 **1. Recorrência de região — uma tarde.** O teto acima pressupõe que exista de onde tirar o seed. O resultado negativo mediu *identidade de procedimento* e a achou rara; um registro de caminho (§22) precisa de algo mais fraco — que a mudança nova caia numa região que alguma mudança anterior já visitou. Esse eixo nunca foi medido, e o número que matou as capabilities **não transfere** para ele. Fase 0.5, com limiares já fixados em [`../experiments/region_recurrence/README.md`](../experiments/region_recurrence/README.md).
 
-**2. Recuperação — 2 a 4 semanas.** Achar o registro certo a partir do prompt é o Seed Resolver (§10), e ele foi contornado de propósito na Fase 0. O teto é 30,8%; quanto disso um mecanismo determinístico captura é a Fase 1.
+**2. ~~Recuperação~~ — respondida, e negativa.** Ver o bloco acima. Custou um dia em vez das 2 a 4
+semanas da Fase 1, que era o ponto de medir antes de construir.
 
 ### A regra que sobrevive às três
 
@@ -313,9 +350,13 @@ O formato é Markdown porque é legível por humanos e LLMs, não exige adapters
 - Símbolos e arquivos cujos nomes aparecem literalmente no prompt.
 - Matching por substring, camelCase/snake_case split.
 
-### 10.2 Git-History Match (caso domínio→código)
+### 10.2 Git-History Match (caso domínio→código) — **REFUTADO**
 
-Este é o mecanismo principal.
+> Era o mecanismo principal. Foi medido e não funciona:
+> [`../experiments/seed_retrieval/RESULT.md`](../experiments/seed_retrieval/RESULT.md).
+> Os passos abaixo ficam como registro do que foi testado, não como plano. O passo 4 — *"recuperar
+> commits contendo termos similares"* — é exatamente o que foi implementado e medido, com
+> ponderação IDF, que é mais forte do que o descrito aqui.
 
 Passos:
 
@@ -668,7 +709,10 @@ independente não é escrita uma vez e esquecida.
 
 ### Fase 1 — Seed Resolver e Context Compiler (2–4 semanas)
 
-**Condicionada à Fase 0.5.** Não iniciar antes do número.
+> **Cancelada.** O componente central desta fase é o Seed Resolver, e o mecanismo dele foi refutado
+> antes de ser construído — que era o propósito de medir primeiro. A lista abaixo fica como registro
+> do escopo que não será implementado. A única coisa que a reabre é o repositório de campo virar o
+> resultado, e a previsão registrada é que ele não vire.
 
 - [ ] `seh record` — compilador de registro de caminho (§22), sem inferência no caminho.
 - [ ] Índice de registros → região, **truncável por commit-alvo** (§15).

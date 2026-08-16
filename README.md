@@ -231,14 +231,25 @@ Two questions remain open, and either can still end it: whether a repository's c
 same *region* often enough for accumulated path records to pay (Phase 0.5), and whether a
 deterministic resolver recovers any of the ceiling (Phase 1, §16 of the PRD).
 
-Phase 0.5 ran its instrument check first and **failed it**. Three repositories picked along a
-declared axis, with the ordering predicted in writing beforehand, came back within 2.8 points of
-each other — the one chosen to falsify the measure landed in the middle. The culprit was not the
-confounder the design anticipated: in a mature repository, the fraction of a commit's files that
-*some* earlier commit already touched has a median of **1.00**, so "has this region been visited
-before?" is a question whose answer is almost always yes. The measure is being redesigned before
-the number that decides is produced. Full record in
-[OSS_RESULT.md](experiments/region_recurrence/OSS_RESULT.md).
+Phase 0.5 ran its instrument check first and **failed it** — in a mature repository the fraction of
+a commit's files that *some* earlier commit already touched has a median of **1.00**, so "has this
+region been visited before?" is a question whose answer is almost always yes
+([record](experiments/region_recurrence/OSS_RESULT.md)). That collapsed the two open questions into
+one: retrieval.
+
+**Retrieval was then measured, and it failed.** Ranking prior commits by weighted term overlap
+against the request text recovers **0.10 / 0.00 / 0.00** of the available opportunity on the three
+repositories, against a threshold of 0.30 fixed before the script existed, and beats "just look at
+the last five commits" by 9.5 points where 15 were required. Where a request term already appears
+in the target's own file paths, all three score an identical 0.25 — the signature of `grep`. The
+case the product exists for is the other one. Record and full method in
+[seed_retrieval/RESULT.md](experiments/seed_retrieval/RESULT.md).
+
+So the position is: **a correct context package is worth roughly 3× in exploration, and there is no
+cheap deterministic way to produce one.** The one thing that could still overturn it is the field
+repository, whose commit subjects are written in the developer's domain language — the property the
+three open-source repositories are weakest in. That prediction is registered, and the test is one
+command.
 
 ### The capability machinery is superseded
 

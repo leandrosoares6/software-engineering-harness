@@ -29,12 +29,15 @@ distribution rather than a single mean.
 from __future__ import annotations
 
 import argparse
+import bisect
 import fnmatch
+import heapq
 import json
 import random
 import statistics
 import subprocess
 import sys
+import time
 from collections import Counter
 from dataclasses import dataclass
 from pathlib import Path
@@ -238,6 +241,7 @@ def analyze(
     index: dict[str, list[int]] = {}
     hotness: Counter[str] = Counter()
     admitted: list[int] = []
+    admitted_sizes: list[int] = []
     frontier = 0
 
     results: list[TargetResult] = []
@@ -253,6 +257,7 @@ def analyze(
                 index.setdefault(path, []).append(frontier)
                 hotness[path] += 1
             admitted.append(frontier)
+            bisect.insort(admitted_sizes, len(prior.files))
             frontier += 1
 
         if not admitted:
@@ -276,10 +281,19 @@ def analyze(
             best_containment, lag_days, lag_commits = 0.0, 0.0, 0
             best_sha, best_subject = "", ""
 
+        middle = len(admitted_sizes) // 2
         budget = hot_k or max(
-            1, int(statistics.median(len(commits[i].files) for i in admitted))
+            1,
+            admitted_sizes[middle]
+            if len(admitted_sizes) % 2
+            else (admitted_sizes[middle - 1] + admitted_sizes[middle]) // 2,
         )
-        hot = {path for path, _ in sorted(hotness.items(), key=lambda i: (-i[1], i[0]))[:budget]}
+        hot = {
+            path
+            for path, _ in heapq.nsmallest(
+                budget, hotness.items(), key=lambda item: (-item[1], item[0])
+            )
+        }
         chance = commits[rng.choice(admitted)]
 
         results.append(
@@ -486,9 +500,18 @@ def main(argv: list[str] | None = None) -> int:
         eligible, tally = select(
             commits, extensions, excludes, args.min_files, args.max_files
         )
+        if len(eligible) > 20_000:
+            print(
+                f"warning: {len(eligible)} eligible commits. Cost grows with the "
+                "square of that, because a file touched by every commit has a "
+                "posting list as long as the history. Bound it with --since.",
+                file=sys.stderr,
+            )
+        started = time.monotonic()
         results, without_prior = analyze(
             eligible, args.cooldown_days, args.union_depth, args.hot_k, args.seed
         )
+        elapsed = time.monotonic() - started
     except MeasurementError as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 1
@@ -504,6 +527,7 @@ def main(argv: list[str] | None = None) -> int:
         "seed": args.seed,
         "since": args.since or "(repository start)",
         "until": args.until or "(HEAD)",
+        "analysis_seconds": round(elapsed, 1),
     }
     print(
         render(

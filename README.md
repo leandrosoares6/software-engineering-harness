@@ -228,9 +228,17 @@ the person who formed the hypothesis, so **this is the ceiling, not the product*
 localization, not correctness; and it is one task in one repository.
 
 Two questions remain open, and either can still end it: whether a repository's changes recur in the
-same *region* often enough for accumulated path records to pay
-([Phase 0.5](experiments/region_recurrence/README.md), an afternoon, pre-registered and not yet
-run), and whether a deterministic resolver recovers any of the ceiling (Phase 1, §16 of the PRD).
+same *region* often enough for accumulated path records to pay (Phase 0.5), and whether a
+deterministic resolver recovers any of the ceiling (Phase 1, §16 of the PRD).
+
+Phase 0.5 ran its instrument check first and **failed it**. Three repositories picked along a
+declared axis, with the ordering predicted in writing beforehand, came back within 2.8 points of
+each other — the one chosen to falsify the measure landed in the middle. The culprit was not the
+confounder the design anticipated: in a mature repository, the fraction of a commit's files that
+*some* earlier commit already touched has a median of **1.00**, so "has this region been visited
+before?" is a question whose answer is almost always yes. The measure is being redesigned before
+the number that decides is produced. Full record in
+[OSS_RESULT.md](experiments/region_recurrence/OSS_RESULT.md).
 
 ### The capability machinery is superseded
 

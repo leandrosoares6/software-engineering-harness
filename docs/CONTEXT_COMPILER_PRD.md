@@ -635,6 +635,37 @@ Os três desfechos possíveis já estão escritos, e um deles **não** é a Fase
 | recorrência frequente, mas **não** vence o null | o produto é uma lista estática de arquivos quentes, custa uma tarde, e a Fase 1 é cancelada |
 | recorrência rara | registros não pagam. Mesmo veredito das capabilities, e pelo mesmo motivo |
 
+#### Resultado parcial: **inconclusivo por defeito de instrumento**
+
+A seleção open source rodou primeiro, para testar se a régua discrimina antes de aplicá-la ao
+repositório que decide. Ela não discrimina:
+[`../experiments/region_recurrence/OSS_RESULT.md`](../experiments/region_recurrence/OSS_RESULT.md).
+
+Três repositórios escolhidos ao longo de um eixo declarado, com ordem prevista por escrito, voltaram
+**79,2% / 82,0% / 79,4%** — uma faixa de 2,8 pontos, com o repositório escolhido como falsificador
+no meio. O null de arquivos quentes ficou em 0,8%–3,6%, então o confundidor previsto não é o
+culpado.
+
+O culpado apareceu num null acrescentado depois, e por isso pós-hoc: a fração dos arquivos do alvo
+que **qualquer** anterior já tocou tem mediana **1,00** nos três. Em repositório maduro a pergunta
+*"esta região já foi visitada?"* tem resposta "sim" quase sempre, e uma pergunta assim não informa
+decisão.
+
+**Consequências, em ordem de importância:**
+
+1. O número do repositório de campo **não deve ser rodado e lido** pelos limiares atuais. Ele daria
+   ~80% como os outros três e não significaria nada.
+2. A Fase 1 continua **não fundada e não cancelada**.
+3. A Fase 0.5 **não conseguiu evitar a pergunta do Seed Resolver**, que era seu propósito. O
+   redesenho proposto — restringir os candidatos ao top-K por sobreposição lexical de assunto, que é
+   o mecanismo do §10.2 — mede recorrência e recuperação juntas, e precisa de novo pré-registro
+   antes de rodar.
+
+Um achado lateral contradiz a teoria que motivou a seleção: `home-assistant/core` foi escolhido por
+crescer em integrações independentes, e mostrou recorrência de domínio tão forte quanto o
+repositório de produto — `mqtt`, `tuya` e `unifiprotect` são revisitados por anos. Integração
+independente não é escrita uma vez e esquecida.
+
 ### Fase 1 — Seed Resolver e Context Compiler (2–4 semanas)
 
 **Condicionada à Fase 0.5.** Não iniciar antes do número.

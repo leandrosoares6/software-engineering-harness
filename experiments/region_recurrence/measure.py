@@ -88,6 +88,8 @@ class TargetResult:
     lag_days: float
     lag_commits: int
     union_containment: float
+    reachable: float
+    cohesion: float
     hot_containment: float
     random_containment: float
 
@@ -296,6 +298,8 @@ def analyze(
         }
         chance = commits[rng.choice(admitted)]
 
+        reachable = len(target.files & index.keys()) / size
+
         results.append(
             TargetResult(
                 sha=target.sha,
@@ -303,6 +307,8 @@ def analyze(
                 subject=target.subject,
                 size=size,
                 best_containment=best_containment,
+                reachable=reachable,
+                cohesion=best_containment / reachable if reachable else 0.0,
                 best_prior_sha=best_sha,
                 best_prior_subject=best_subject,
                 lag_days=lag_days,
@@ -387,6 +393,7 @@ def render(
             f"union of up to {params['union_depth']} priors",
             [r.union_containment for r in results],
         ),
+        ("**reachable at all** (any prior, no limit)", [r.reachable for r in results]),
         ("hot-k static list", [r.hot_containment for r in results]),
         ("random prior commit", [r.random_containment for r in results]),
     ):
@@ -396,10 +403,39 @@ def render(
         )
     out("")
     out(
-        "The row that decides is **best prior vs hot-k**. If a static list of "
-        "frequently touched files scores the same, the recurrence signal is "
-        "redundant and no resolver recovers it."
+        "Two rows decide, and **reachable** is the stricter of the two. It is the "
+        "fraction of the target's files that *any* prior commit ever touched — the "
+        "ceiling no single record can beat. Over a long history it approaches 1.00 "
+        "for nearly every target, which makes a high `best prior` almost tautological "
+        "unless it is read against this row."
     )
+    out("")
+
+    cohesion = [r.cohesion for r in results]
+    out("## Cohesion — best prior ÷ reachable")
+    out("")
+    out(
+        "How much of the *already-visited* part of the region one single commit "
+        "captures. This is the quantity a path record actually competes on: 1.00 means "
+        "one earlier change covers everything history offers, and a low value means the "
+        "region was assembled from many unrelated visits."
+    )
+    out("")
+    out(f"- median: **{_median(cohesion):.2f}**")
+    out(f"- share >= 0.80: **{_share(cohesion, 0.8):.1%}**")
+    out("")
+    out("| files changed | targets | median reachable | median cohesion |")
+    out("| --- | --- | --- | --- |")
+    for low, high in SIZE_BUCKETS:
+        bucket = [r for r in results if low <= r.size <= high]
+        if not bucket:
+            continue
+        label = f"{low}" if low == high else (f"{low}+" if high > 10**8 else f"{low}-{high}")
+        out(
+            f"| {label} | {len(bucket)} "
+            f"| {_median([r.reachable for r in bucket]):.2f} "
+            f"| {_median([r.cohesion for r in bucket]):.2f} |"
+        )
     out("")
 
     out("## Lag to the best prior")

@@ -48,8 +48,14 @@ from measure import (  # noqa: E402
     select,
 )
 
-K_VALUES = (1, 3, 5, 10)
+K_VALUES = (1, 3, 5, 10, 25, 50, 100)
 K_DECISIVE = 5
+
+# Values above 10 are not part of the pre-registered verdict. They answer a
+# different, later question: whether a cheap first stage could recall the right
+# prior at all, so that a second stage could rerank it. A two-stage design is
+# only possible if capture keeps climbing out here.
+K_RECALL = (5, 10, 25, 50, 100)
 
 NOISE = frozenset(
     """
@@ -311,11 +317,30 @@ def render(root: Path, head: str, params: dict[str, object], rows: list[Scored])
     )
     out("")
 
+    out("## Recall diagnostic — post-hoc, not part of the verdict")
+    out("")
+    out(
+        "Capture as K is pushed far past anything a context package would carry. "
+        "This does not rescue K = 5; it asks a later question: could a cheap first "
+        "stage recall the right prior at all, for a second stage to rerank? A curve "
+        "that stays flat says no first stage exists and reranking has nothing to work "
+        "with."
+    )
+    out("")
+    out("| K | IDF capture (hard) | recency capture (hard) |")
+    out("| --- | --- | --- |")
+    for k in K_RECALL:
+        out(
+            f"| {k} | {_median(_capture(hard, 'idf', k)):.2f} "
+            f"| {_median(_capture(hard, 'recency', k)):.2f} |"
+        )
+    out("")
+
     out("## Sensitivity to K")
     out("")
     out("| K | IDF capture (hard) | recency capture (hard) | IDF capture (easy) |")
     out("| --- | --- | --- | --- |")
-    for k in K_VALUES:
+    for k in (1, 3, 5, 10):
         out(
             f"| {k} | {_median(_capture(hard, 'idf', k)):.2f} "
             f"| {_median(_capture(hard, 'recency', k)):.2f} "

@@ -131,6 +131,46 @@ admitidos LLM ou embeddings na recuperação, o que se está construindo é o qu
 já fazem. O desconforto inicial — *"existem libs que já fazem isso"* — estava certo, e agora tem
 evidência em vez de intuição.
 
+## Adendo pós-hoc: existe um primeiro estágio para um rerank?
+
+Acrescentado depois do veredito, que ele **não altera** — K decisivo continua 5. A pergunta é
+outra e é sobre o desenho seguinte: se um segundo estágio fosse reordenar candidatos, um primeiro
+estágio barato conseguiria trazer o anterior certo para a lista?
+
+Captura na classe difícil, empurrando K muito além do que um pacote carregaria:
+
+| K | gitea IDF | gitea recency | sklearn IDF | sklearn recency | HA IDF | HA recency |
+|---|---|---|---|---|---|---|
+| 5 | 0,10 | 0,00 | 0,00 | 0,00 | 0,00 | 0,00 |
+| 10 | 0,25 | 0,15 | 0,20 | 0,00 | 0,00 | 0,00 |
+| 25 | 0,33 | **0,33** | 0,33 | 0,18 | 0,00 | 0,00 |
+| 50 | 0,40 | **0,50** | 0,33 | **0,33** | 0,20 | 0,00 |
+| 100 | 0,50 | **0,50** | 0,50 | 0,40 | 0,25 | 0,00 |
+
+**A vantagem lexical some conforme K cresce, e no gitea o recency chega a superá-la.** A recuperação
+que aparece em K = 50 não vem de o casamento lexical ter achado algo: vem de 50 commits serem
+muitos commits.
+
+Duas consequências, e elas apontam para lados opostos:
+
+1. **Não existe primeiro estágio *informativo*.** Um rerank não teria uma lista curta e boa para
+   reordenar — teria uma lista arbitrária. O sinal lexical é ruído.
+2. **Mas existe um primeiro estágio *suficiente*, e ele é grátis.** "Os 50 anteriores mais
+   recentes" recupera 0,50 da oportunidade no gitea sem índice, sem prompt e sem modelo. Como
+   estágio de recall, `recency-50` empata ou ganha do IDF.
+
+### O teto que isso fixa
+
+Um reordenador **perfeito** sobre `recency-50` capturaria no máximo **0,50 / 0,33 / 0,20** nos três
+repositórios. Como o oráculo na classe difícil é 0,40–0,50, o pacote resultante teria containment
+de aproximadamente **0,25 da região do alvo** no melhor caso.
+
+Isso é a informação que decide o próximo passo, e ela não é sobre recuperação:
+
+> **A Fase 0 mediu valor com um pacote de containment ≈ 1,00.** Ninguém mediu o valor de um pacote
+> de containment ≈ 0,25. Os 3× podem sobreviver, degradar suavemente, ou desaparecer — e nenhuma
+> melhora de recuperação importa se o valor não sobrevive à qualidade alcançável.
+
 ## Reprodução
 
 ```bash

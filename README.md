@@ -6,6 +6,24 @@ SEH is a model-agnostic engineering harness designed to reduce unnecessary LLM u
 
 ## Status
 
+> ## Closed as a product, 2026-08-17
+>
+> Three theses were tested to completion, each with its kill criterion fixed in writing before the
+> run. All three closed. **[`docs/ENCERRAMENTO.md`](docs/ENCERRAMENTO.md) is the closing record** —
+> read it before anything else here.
+>
+> - **Edit reuse** — dead on economics. The recurring procedure a field scan found recurred 3 times
+>   in 5 months, with 4 mechanical lines out of 1242 insertions.
+> - **Context compilation** — the value is real and measured (**52 → 16 tool calls**), but the
+>   mechanism that would produce the package automatically was refuted: **0.10 / 0.00 / 0.00**
+>   against a threshold of 0.30 fixed beforehand.
+> - **Exposing mechanical operations** — the hypothesis is right and the position is taken. Serena
+>   and others already ship LSP rename/move/extract over MCP, with token-saving figures published.
+>
+> The code works and the suite passes; nothing here was abandoned because it was broken. The two
+> measurement scripts under `experiments/` depend on nothing in SEH and remain useful on any
+> repository with a `git log`.
+
 `0.1.0a3` — Python-first foundation prototype.
 
 The first milestone intentionally contains **no LLM integration**. It proves the deterministic substrate first: Git-aware repository indexing, a structural graph, and queryable engineering context.

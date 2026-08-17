@@ -132,13 +132,21 @@ janela de contexto se localizando.
 se paga. Numa varredura de 654 commits ao longo de 15 meses, o procedimento repetido que existia
 recorreu 3 vezes em 5 meses, e a parte mecânica dele eram 4 linhas em 1242. Anos para se pagar.
 
-**Ainda não medido.** Duas coisas, e o projeto pode morrer em qualquer uma:
+**Medido depois, e é o que encerrou o projeto.** As duas perguntas que faltavam foram respondidas:
 
-1. Com que frequência uma tarefa nova cai num bairro já visitado. Se for raro, o caderno não paga.
-2. Se o programa consegue achar a anotação certa a partir do pedido em português. O papel da Cena 2
-   foi montado à mão por um humano que já sabia a resposta — isso mede o teto, não o produto.
+1. *Com que frequência uma tarefa nova cai num bairro já visitado?* **Quase sempre** — e por isso a
+   pergunta não ajuda. Em repositório maduro, praticamente todo arquivo já foi tocado antes.
+2. *O programa acha a anotação certa a partir do pedido?* **Não.** Quando os termos do pedido não
+   aparecem nos nomes dos arquivos — que é justamente o caso que justifica a ferramenta existir — ele
+   erra quase sempre. Quando aparecem, ele acerta um pouco, mas aí `grep` faz igual.
 
-O número de 52 → 16 é **o melhor caso possível**, não o esperado.
+O número de 52 → 16 era **o melhor caso possível**, com o papel montado à mão por quem já sabia a
+resposta. Ele continua verdadeiro, e continua sendo um teto que ninguém conseguiu alcançar
+automaticamente.
+
+O projeto foi encerrado como produto. O registro completo está em
+[`ENCERRAMENTO.md`](ENCERRAMENTO.md), e a Cena 2 acima continua valendo como descrição do que teria
+sido — não do que existe.
 
 ---
 
